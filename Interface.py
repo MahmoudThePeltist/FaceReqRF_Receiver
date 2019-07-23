@@ -1,22 +1,31 @@
+print "---- ### Welcome to FaceReqRF ### ----\n"
+print "Importing Sys, OS and datetime libraries... "
 import sys
 import os
+import datetime
 #these imports are for cx_freeze
+print "Importing numpy... "
 import numpy.core._methods
 import numpy.lib.format
 #pyqt import
+print "Importing PyQt4, sqlite3, Socket... "
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from sqlite3 import *
-import datetime
-from moviepy.editor import ImageSequenceClip
-from moviepy.video.fx.fadein import fadein
-from moviepy.video.fx.fadeout import fadeout
 from socket import gethostbyname, gethostname
+#try to import moviepy
+print "Trying to import MoviePy..."
+try:
+    from moviepy.editor import ImageSequenceClip
+except Exception as e:
+   print "MoviePy import error.\nException:" + str(e)
 #reception and display classes
+print "Importing local modules... "
 from PyQtCamClass import *
 from PyQtSocketClass import *
 from PyQtHTTPClass import *
 from PyQtWindowClass import *
+from PyQtImageViewer import *
 #settings widgets
 from SettingsClientWidget import *
 from SettingsFaceWidget import *
@@ -56,33 +65,50 @@ class mainWindow(QMainWindow):
         self.central_widget = QWidget()
         self.central_widget.setLayout(self.stacked_layout)
         self.setCentralWidget(self.central_widget)
+        #Make sure recording directory exists
+        if not os.path.exists(self.localDir + "/recording"):
+            print "Directory: ", (self.localDir + "/recording"), " does not exist, creating..."
+            os.makedirs(self.localDir + "/recording")
+        #Make sure database directory exists
+        if not os.path.exists(self.localDir + "/database"):
+            print "Directory: ", (self.localDir + "/database"), " does not exist, creating..."
+            os.makedirs(self.localDir + "/database")
+        #Make sure exported directory exists
+        if not os.path.exists(self.localDir + "/exported"):
+            print "Directory: ", (self.localDir + "/exported"), " does not exist, creating..."
+            os.makedirs(self.localDir + "/exported")
+        #Make sure frames directory exists
+        if not os.path.exists(self.localDir + "/frames"):
+            print "Directory: ", (self.localDir + "/frames"), " does not exist, creating..."
+            os.makedirs(self.localDir + "/frames")
         #reception variables
-        self.transMeth = 0
+        self.transMeth = 1
         self.host = gethostbyname(gethostname())
         self.port = 4096
         self.buf = 1024
-        self.windowTitle = 'firefox'
+        self.windowTitle = '9868'
         self.windowResize = 1
-        self.cropX1 = 0
-        self.cropY1 = 30
-        self.cropX2 = 0
+        self.cropX1 = 350
+        self.cropY1 = 120
+        self.cropX2 = 350
         self.cropY2 = 0
         #button flags
         self.recording = False
         self.receiving = False
         self.firstRun = True
         #Detection and Recognition flags
-        self.detMethod = 1
+        self.detMethod = 2
         self.recMethod = 2
+        self.useXML = 1
         #recording variables
-        self.recordSkip = 2
+        self.recordSkip = 0
         self.writeFPS = 10
         self.writeMethod = 0
         self.writeName = 'recording'
         self.writeCodec = "libx264" #libx264 or mpeg4 or rawvideo or png or libvorbis or libvpx
         self.writeProgram = "imageio" #imageio or ImageMagick or ffmpeg
         self.httpAddress = 'http://192.168.23.2:4747/mjpegfeed'#IP Cam variable
-        self.camPort = 1 #local webcam port
+        self.camPort = 0 #local webcam port
         
     def create_main_menu_layout(self):
         #image in main window:
@@ -159,11 +185,11 @@ class mainWindow(QMainWindow):
     def modifyDetRecSettings(self):
         self.reception_dialog = DetRecSettings()#instantiate the dialog box
         #set values
-        self.reception_dialog.setValues(self.detMethod,self.recMethod)
+        self.reception_dialog.setValues(self.detMethod,self.recMethod, self.useXML)
         print "Running dialog box."
         self.reception_dialog.exec_()
         print "Getting setting values."
-        self.detMethod, self.recMethod = self.reception_dialog.getValues()
+        self.detMethod, self.recMethod, self.useXML = self.reception_dialog.getValues()
         
     def modifyRecordingSettings(self):
         self.recording_dialog = RecordingSettings()#instantiate the dialog box
@@ -185,6 +211,10 @@ class mainWindow(QMainWindow):
     def receive_action(self):
         #if we are receiving pause and if we are paused start receiving
         if self.receiving == False:
+            #set the recognizer variables
+            self.video.recMethod = self.recMethod 
+            self.video.detMethod = self.detMethod 
+            self.video.useXML = self.useXML
             #call self.video.startVideo() func with this click() see func where btn is defined for more info
             self.invisible_start_btn.click()
             self.receiving = True #set local flag            
@@ -197,10 +227,6 @@ class mainWindow(QMainWindow):
             self.receive_btn.setText("<< Start Reception >>")  #change the text written on the btn
             
     def record_action(self):       
-        #Make sure recording directory exists
-        if not os.path.exists(self.localDir + "/recording"):
-            print "Directory: ", (self.localDir + "/recording"), " does not exist, creating..."
-            os.makedirs(self.localDir + "/recording")
         #we need to setup a folder to hold the recorded frames
         now = datetime.datetime.now()#get current date info
         folder_name = now.strftime("%Y%m%d") + "_" + str(self.transMeth)#folder name 'year+month+day_transmissionMethod'
@@ -233,8 +259,8 @@ class mainWindow(QMainWindow):
                 #Export the recorder images as video using ffmpeg
                 print "Grabbing images from: ", str(folderLoc)
                 folderName = str(folderLoc)[-8:]#get the folder name (the last 8 characters) from the directory name
-                clip = ImageSequenceClip(str(folderLoc), fps = int(self.writeFPS))
                 try:
+                    clip = ImageSequenceClip(str(folderLoc), fps = int(self.writeFPS))
                     print "Writing file..."
                     if self.writeMethod == 0:
                         clip.write_videofile(self.localDir + "/exported/" + folderName + "_" + str(self.writeName) + ".avi",codec = str(self.writeCodec))
@@ -313,15 +339,23 @@ class mainWindow(QMainWindow):
         #function to set the lables in the reception page
         self.db = database_manager()
         #get the values from the database
-        first_name = self.db.get_value('"First Name"','Employees','ID', my_label)
-        last_name = self.db.get_value('"Last Name"','Employees','ID', my_label)
-        position = self.db.get_value('Position','Employees','ID', my_label)
-        ID = str(my_label)
+        first_name = self.db.get_value('"First Name"','Employees','ID', my_label[0])
+        last_name = self.db.get_value('"Last Name"','Employees','ID', my_label[0])
+        position = self.db.get_value('Position','Employees','ID', my_label[0])
         #set the labels in the menu
-        self.le1.setText(first_name[0][0])
-        self.le2.setText(last_name[0][0])
-        self.le3.setText(position[0][0])
-        self.le4.setText(ID)
+        try:
+            self.le1.setText(first_name[0][0])
+            self.le2.setText(last_name[0][0])
+            self.le3.setText(position[0][0])
+            self.le4.setText(str(my_label[0]))
+            self.le5.setText(str(int(my_label[1])))
+        except:
+            self.le1.setText("Value not in DB")
+            self.le2.setText("Value not in DB")
+            self.le3.setText("Value not in DB")
+            self.le4.setText(str(my_label[0]))
+            self.le5.setText(str(int(my_label[1])))
+            
         
     #create the layout for adding new faces
     def create_face_window(self):
@@ -389,21 +423,25 @@ class mainWindow(QMainWindow):
         self.l2 = QLabel("Last Name: ")
         self.l3 = QLabel("Wanted For: ")
         self.l4 = QLabel("ID Number: ")
+        self.l5 = QLabel("Confidence: ")
         #add textboxes
         self.le1 = QLabel()
         self.le2 = QLabel()
         self.le3 = QLabel()
         self.le4 = QLabel()
+        self.le5 = QLabel()
         #font settings
         font_A = QFont('Helvetica',20)
         self.l1.setFont(font_A)
         self.l2.setFont(font_A)
         self.l3.setFont(font_A)
         self.l4.setFont(font_A)
+        self.l5.setFont(font_A)
         self.le1.setFont(font_A)
         self.le2.setFont(font_A)
         self.le3.setFont(font_A)
         self.le4.setFont(font_A)
+        self.le5.setFont(font_A)
         #video capture and display classes
         self.thread = QtCore.QThread()
         self.thread.start()
@@ -411,25 +449,21 @@ class mainWindow(QMainWindow):
         if (self.transMeth == 0):
             try:
                 self.video = ShowReceivedVideo()
-                self.video.set_values(self.transMeth, self.host, self.port, self.buf)
-                self.video.moveToThread(self.thread)
-                self.image_viewer = ReceivedImageViewer()
-            except Exception as e:
-                print "Reception initialization error, check settings.\nException:" + str(e)
-                errorBox("Writing exception check settings.\nException:" + str(e))
-        #if we are using local webcam use webcam classes
-        elif (self.transMeth == 1):
-            try:
-                self.video = ShowVideo()
-                #set the webcam port
-                if self.video.webcamPort != self.camPort:
-                    self.video.webcamPort = self.camPort
-                    self.video.camera = cv2.VideoCapture(self.camPort)
+                self.video.set_values(self.transMeth, self.host, self.port, self.buf, self.useXML)
                 self.video.moveToThread(self.thread)
                 self.image_viewer = ImageViewer()
             except Exception as e:
                 print "Reception initialization error, check settings.\nException:" + str(e)
                 errorBox("Writing exception check settings.\nException:" + str(e))
+        #if we are using local webcam use webcam classes
+        elif (self.transMeth == 1):
+            self.video = ShowVideo()
+            #set the webcam port
+            if self.video.webcamPort != self.camPort:
+                self.video.webcamPort = self.camPort
+                self.video.camera = cv2.VideoCapture(self.camPort)
+            self.video.moveToThread(self.thread)
+            self.image_viewer = ImageViewer()
         #if we are using RTL-SDR use gnu classes
         elif (self.transMeth == 2):
             try:
@@ -486,11 +520,13 @@ class mainWindow(QMainWindow):
         self.form_grid.addWidget(self.l2,1,0)
         self.form_grid.addWidget(self.l3,2,0)
         self.form_grid.addWidget(self.l4,3,0)
+        self.form_grid.addWidget(self.l5,4,0)
         #add line edit widgets to the grid layout
         self.form_grid.addWidget(self.le1,0,1)
         self.form_grid.addWidget(self.le2,1,1)
         self.form_grid.addWidget(self.le3,2,1)
         self.form_grid.addWidget(self.le4,3,1)
+        self.form_grid.addWidget(self.le5,4,1)
         #add buttons to button grid
         self.first_button_grid.addWidget(self.receive_btn,0,0)
         self.first_button_grid.addWidget(self.record_btn,1,0)

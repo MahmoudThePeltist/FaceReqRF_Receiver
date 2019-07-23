@@ -17,13 +17,13 @@ class DetRecSettings(QDialog):
         #set the window title and icon                     
         self.setWindowTitle("Detection/Recognition Settings")
         self.setWindowIcon(QIcon(self.localDir + "/images/FaceReqRFIcon.png"))
-        #Add Radio Buttons
+        #add first groupbox and radio button group
         self.radio_group_box_1 = QGroupBox("Select detection method:")
         self.radio_button_group_1 = QButtonGroup()
         
         self.radio_button_0 = QRadioButton("HAAR Cascade")
         self.radio_button_1 = QRadioButton("LBP Cascade")
-        self.radio_button_2 = QRadioButton("Improved LBP Cascade")
+        self.radio_button_2 = QRadioButton("Caffe - Deep Learning")
         
         self.radio_button_layout_1 = QVBoxLayout()
         self.radio_button_layout_1.addWidget(self.radio_button_0)
@@ -38,8 +38,8 @@ class DetRecSettings(QDialog):
         self.radio_button_group_1.setId(self.radio_button_2, 2)
         
         self.radio_group_box_1.setLayout(self.radio_button_layout_1)
-                
-        self.radio_group_box_2 = QGroupBox("Select recognission method:")
+        #add second groupbox and radio button group       
+        self.radio_group_box_2 = QGroupBox("Select recognition method:")
         self.radio_button_group_2 = QButtonGroup()
         
         self.radio_button_3 = QRadioButton("EigenFaces Method")
@@ -59,6 +59,14 @@ class DetRecSettings(QDialog):
         self.radio_button_group_2.setId(self.radio_button_5, 2)
         
         self.radio_group_box_2.setLayout(self.radio_button_layout_2)
+        #add final groupbox and checkbox
+        self.checkbox_group_box = QGroupBox("Other:")
+        self.checkBox_label = QLabel("Use pretrained recognizer XML: ")
+        self.checkBox = QCheckBox()
+        self.checkbox_layout = QHBoxLayout()
+        self.checkbox_layout.addWidget(self.checkBox_label)
+        self.checkbox_layout.addWidget(self.checkBox)
+        self.checkbox_group_box.setLayout(self.checkbox_layout)
                 
         self.SettingsSubmitButton = QPushButton("Submit")
         
@@ -66,13 +74,14 @@ class DetRecSettings(QDialog):
         self.setting_total_layout = QVBoxLayout()
         self.setting_total_layout.addWidget(self.radio_group_box_1)
         self.setting_total_layout.addWidget(self.radio_group_box_2)
+        self.setting_total_layout.addWidget(self.checkbox_group_box)
         self.setting_total_layout.addWidget(self.SettingsSubmitButton)
         self.setLayout(self.setting_total_layout)
 
         self.SettingsSubmitButton.clicked.connect(self.close)
     
     #function to set the textbox default values
-    def setValues(self, detMethod, recMethod):
+    def setValues(self, detMethod, recMethod, useXML):
         print "Current Values are: ", detMethod, recMethod
         if detMethod == 0:
             self.radio_button_0.setChecked(True)
@@ -86,8 +95,12 @@ class DetRecSettings(QDialog):
             self.radio_button_4.setChecked(True)
         elif recMethod == 2:
             self.radio_button_5.setChecked(True)
+        if useXML == 0:
+            self.checkBox.setChecked(0)
+        elif useXML == 1:
+            self.checkBox.setChecked(1)
 
     #function to return the new entered values
     def getValues(self):
-        print "New values are: ", self.radio_button_group_1.checkedId(),  self.radio_button_group_2.checkedId()
-        return self.radio_button_group_1.checkedId(),  self.radio_button_group_2.checkedId()
+        print "Detector: ", self.radio_button_group_1.checkedId(),"\nRecognizor: ",  self.radio_button_group_2.checkedId(),"\nUse pretrained recognizer XML: ", int(self.checkBox.isChecked())
+        return self.radio_button_group_1.checkedId(),  self.radio_button_group_2.checkedId(), int(self.checkBox.isChecked())

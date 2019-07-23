@@ -3,9 +3,12 @@ from PyQt4.QtCore import *
 import os
 import sys
 from shutil import copyfile
+import time
+from DialogError import *
 
 #reception and display classes
 from PyQtCamClass import *
+from PyQtImageViewer import *
 
 class faceChoice(QDialog):
     """This class will create a face folder and allow the user to add a face to it"""
@@ -38,9 +41,9 @@ class faceChoice(QDialog):
         self.text1.setAlignment(Qt.AlignCenter)
         self.text2.setAlignment(Qt.AlignCenter)
         #connect buttons to functions        
-        self.button1.clicked.connect(self.choiceA)
-        self.button2.clicked.connect(self.choiceB)
-        self.button3.clicked.connect(self.getfiles)
+        self.button1.clicked.connect(self.justMake)
+        self.button2.clicked.connect(self.capImages)
+        self.button3.clicked.connect(self.getFiles)
         #create layouts and add widgets
         self.buttonLayout = QHBoxLayout()
         self.buttonLayout.addWidget(self.button1)
@@ -56,36 +59,48 @@ class faceChoice(QDialog):
         self.folderName = newName
         self.text1.setText("Warning, folder " + self.folderName + " not found!")
     
-    def choiceA(self):
-        print "Directory: ", (self.localDir + "/training-data/" + self.folderName), " does not exist, creating..."
-        os.makedirs(self.localDir + "/training-data/" + self.folderName)
-        self.close()
+    def justMake(self):
+        try:
+            print "Directory: ", (self.localDir + "/training-data/" + self.folderName), " does not exist, creating..."
+            os.makedirs(self.localDir + "/training-data/" + self.folderName)
+            self.close()
+        except Exception as e:
+            print "File get issue.\nException: " + str(e)
+            errorBox("File get issue.\nException: " + str(e))
     
-    def choiceB(self):
-        print "Directory: ", (self.localDir + "/training-data/" + self.folderName), " does not exist, creating..."
-        os.makedirs(self.localDir + "/training-data/" + self.folderName)
-        capWindow = imageCapture()
-        capWindow.camPort = self.camPort
-        capWindow.folderName = self.folderName
-        capWindow.exec_()        
-        self.close()
+    def capImages(self):
+        try:
+            print "Directory: ", (self.localDir + "/training-data/" + self.folderName), " does not exist, creating..."
+            os.makedirs(self.localDir + "/training-data/" + self.folderName)
+            capWindow = imageCapture()
+            capWindow.camPort = self.camPort
+            capWindow.folderName = self.folderName
+            capWindow.exec_()        
+            self.close()
+        except Exception as e:
+            print "Capture window issue.\nException: " + str(e)
+            errorBox("Capture window issue.\nException: " + str(e))
 
-    def getfiles(self):
-        print "Directory: ", (self.localDir + "/training-data/" + self.folderName), " does not exist, creating..."
-        os.makedirs(self.localDir + "/training-data/" + self.folderName)
-        dlg = QFileDialog()#instantiate QFileDialog object
-        #set the selection mode to "ExistingFiles" so we can select muliple images
-        dlg.setFileMode(QFileDialog.ExistingFiles)
-        #set the filter so that we can only select image files
-        dlg.setFilter("Image files (*.jpg)")
-        fileNames = QStringList() #create a QstringList to hold the list of files
-        if dlg.exec_(): #if the dialog box is executed
-             fileNames = dlg.selectedFiles()#get the list of files from the dialog box
-             for fileLoc in fileNames:
-                 print fileLoc
-                 newFile = self.localDir + "/training-data/" + self.folderName + "/" + str(self.fileCount) + ".jpg"
-                 copyfile(fileLoc,newFile)
-                 self.fileCount +=1
+    def getFiles(self):
+        try:
+            print "Directory: ", (self.localDir + "/training-data/" + self.folderName), " does not exist, creating..."
+            os.makedirs(self.localDir + "/training-data/" + self.folderName)
+            dlg = QFileDialog()#instantiate QFileDialog object
+            #set the selection mode to "ExistingFiles" so we can select muliple images
+            dlg.setFileMode(QFileDialog.ExistingFiles)
+            #set the filter so that we can only select image files
+            dlg.setFilter("Image files (*.jpg)")
+            fileNames = QStringList() #create a QstringList to hold the list of files
+            if dlg.exec_(): #if the dialog box is executed
+                 fileNames = dlg.selectedFiles()#get the list of files from the dialog box
+                 for fileLoc in fileNames:
+                     print fileLoc
+                     newFile = self.localDir + "/training-data/" + self.folderName + "/" + str(self.fileCount) + ".jpg"
+                     copyfile(fileLoc,newFile)
+                     self.fileCount +=1
+        except Exception as e:
+            print "File get issue.\nException: " + str(e)
+            errorBox("File get issue.\nException: " + str(e))
              
         
 class imageCapture(QDialog):
@@ -94,7 +109,12 @@ class imageCapture(QDialog):
     def __init__(self):
         super(imageCapture,self).__init__()
         #set local directory, title and icon        
-        self.localDir = os.path.dirname(os.path.realpath(__file__))                        
+        if getattr(sys, 'frozen', False):
+            # The application is frozen
+            self.localDir = os.path.dirname(sys.executable)
+        else:
+            # The application is not frozen
+            self.localDir = os.path.dirname(os.path.realpath(__file__))                        
         self.setWindowTitle("Adding face folder")
         self.setWindowIcon(QIcon(self.localDir + "/images/FaceReqRFIcon.png"))
         self.setStyleSheet("QPushButton {background-color: #7a92ba; height:30%; border: none; color:white; font-size:16px;} QPushButton:hover{background-color: #5370a0}")
@@ -132,8 +152,13 @@ class imageCapture(QDialog):
         self.setLayout(self.mainLayout)
     
     def capture(self):
-        self.video.folderName = self.folderName
-        self.video.captureImage = True
+        try:
+            self.video.folderName = self.folderName
+            self.video.captureImage = True
+            time.sleep(0.3)
+        except Exception as e:
+            print "Image capture issue.\nException: " + str(e)
+            errorBox("Image capture issue.\nException: " + str(e))
     
     def startCamera(self):
         #if we are receiving pause and if we are paused start receiving

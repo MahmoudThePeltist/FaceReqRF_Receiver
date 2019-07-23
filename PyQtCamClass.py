@@ -21,6 +21,8 @@ class ShowVideo(QtCore.QObject):
         #facial recognission variables
         self.faceRec = facial_recognition()
         self.training_data_folder = 'training-data'
+        self.detMethod = 1
+        self.recMethod = 2
         self.face_recker = None    
         #set the pause screen image
         self.pauseImageDir = self.localDir + '\images\FaceRecRFWait.png'
@@ -38,13 +40,18 @@ class ShowVideo(QtCore.QObject):
         #initialize camera
         self.webcamPort = None
         self.camera = None
+        self.useXML = 0
 
     video_signal = QtCore.pyqtSignal(QtGui.QImage, name = 'vidSig')
-    label_signal = QtCore.pyqtSignal(int)
+    label_signal = QtCore.pyqtSignal(tuple)
     
     @QtCore.pyqtSlot()
     def startVideo(self):
         #set the flag used to run the camera
+        self.faceRec.faceDetector = self.detMethod
+        self.faceRec.faceRecognizer = self.recMethod
+        print "\nWe are using face detector: " + str(self.faceRec.faceDetector)
+        print "We are using face recognizer: " + str(self.faceRec.faceRecognizer)
         self.run_video = True
         while self.run_video:
             ret, frame = self.camera.read()
@@ -52,7 +59,12 @@ class ShowVideo(QtCore.QObject):
                 #convert the BGR used by openCV to RGB used by PyQt   
                 color_swapped_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) 
                 #set default image label ("UNKNOWN")
-                image_label = [0]
+                image_label = (0,0)
+                #load a pretrained recognizer XML file
+                if self.face_recker is None and self.useXML is 1:
+                    print "No recognizer found, attepting to load one."
+                    self.face_recker = self.faceRec.load_recognizer(self.recMethod)
+                #perform recognition if recognizer exists
                 if self.face_recker is not None:
                     predicted_image, image_label = self.faceRec.predict(self.face_recker,color_swapped_image)
                 else:
@@ -68,7 +80,7 @@ class ShowVideo(QtCore.QObject):
                 self.pause_image = self.pause_image.scaled(width,height)
                 #emit the detection QImage
                 self.emitted_signal = self.video_signal.emit(self.qt_image)
-                self.another_signal = self.label_signal.emit(image_label[0])
+                self.another_signal = self.label_signal.emit(image_label)
                 #Recording all predicted frames in recording folder after reconverting the color
                 if self.record == True:
                     self.skip_count += 1
@@ -107,26 +119,3 @@ class ShowVideo(QtCore.QObject):
     def unpause_video(self):
         #this is called if the signal is disconnected
         self.video_signal.emit(self.qt_image)
-        
-class ImageViewer(QtGui.QWidget):
-    def __init__(self, parent = None):
-        super(ImageViewer, self).__init__(parent)
-        #set the default screen image
-        self.localDir = os.path.dirname(os.path.realpath(__file__)) 
-        self.default_image = self.localDir + '/images/FaceRecRFRecognize.png'
-        self.image = QtGui.QImage(self.default_image,"PNG")
-        self.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
- 
-    def paintEvent(self, event):
-        painter = QtGui.QPainter(self)
-        painter.drawImage(0,0, self.image)
-        self.image = QtGui.QImage()
- 
-    @QtCore.pyqtSlot(QtGui.QImage)
-    def setImage(self, image):
-        if image.isNull():
-            print("Viewer Dropped frame!")
-        self.image = image
-        if image.size() != self.size():
-            self.setFixedSize(image.size())
-        self.update()

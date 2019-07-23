@@ -5,6 +5,8 @@ import os
 import sys
 import shutil
 
+from DialogError import *
+
 class DisplayClass(QDialog):
     """This class displays a table of entered people"""
     
@@ -33,9 +35,9 @@ class DisplayClass(QDialog):
         try:
             self.conn = sqlite3.connect(self.sqlite_file)
             self.c = self.conn.cursor()
-        except:
-            print "Database connect Error, check if database exists."
-            self.errorBox("Database connect Error, check if database exists.")
+        except Exception as e:
+            print "Database connect error.\nException:" + str(e)
+            errorBox("Database connect error.\nException:" + str(e))
         self.c.execute('SELECT * FROM {tn}'.\
             format(tn=self.tbl_name))
         self.tableValues = self.c.fetchall()
@@ -106,18 +108,18 @@ class DisplayClass(QDialog):
             if os.path.exists(jPath):
                 try:
                     shutil.rmtree(jPath)
-                except OSError as e:
-                    print ("Error: %s - %s." % (e.filename, e.strerror))
-                    self.errorBox("Error: %s - %s." % (e.filename, e.strerror))
+                except Exception as e:
+                    print "J-del delete Error.\nException:" + str(e)
+                    errorBox("J-del delete Error.\nException:" + str(e))
             else:
                 print jPath + " does not exist."
             #if s directory exists, delete it
             if os.path.exists(sPath):
                 try:
                     shutil.rmtree(sPath)
-                except OSError as e:
-                    print ("Error: %s - %s." % (e.filename, e.strerror))
-                    self.errorBox("Error: %s - %s." % (e.filename, e.strerror))
+                except Exception as e:
+                    print "S-dir delete Error.\nException:" + str(e)
+                    errorBox("S-dir delete Error.\nException:" + str(e))
             else:
                 print sPath + " does not exist."
         self.conn.commit()
@@ -130,9 +132,9 @@ class DisplayClass(QDialog):
         try:
             self.conn = sqlite3.connect(self.sqlite_file)
             self.c = self.conn.cursor()
-        except:
-            print "Database connect error, is probably already open."
-            self.errorBox("Database connect error, is probably already open.")
+        except Exception as e:
+            print "Database connect error.\nException:" + str(e)
+            errorBox("Database connect error.\nException:" + str(e))
         self.c.execute('SELECT * FROM {tn}'.\
             format(tn=self.tbl_name))
         self.tableValues = self.c.fetchall()
@@ -148,19 +150,3 @@ class DisplayClass(QDialog):
                 item.setFlags(Qt.ItemIsEnabled)#make the item non editable
                 self.displayTable.setItem(self.row, self.col, item) #display item in table
             self.row += 1
-    
-    def errorBox(self, errorText):
-        self.popUp = QDialog()
-        self.popUp.setWindowTitle("Error")
-        self.popUp.setWindowIcon(QIcon(self.localDir + "/images/FaceReqRFIcon.png"))
-        #add buttons label and textbox
-        self.errorLabel = QLabel(errorText)
-        self.okBtn = QPushButton("Ok")
-        #add connection
-        self.okBtn.clicked.connect(self.popUp.close)
-        #setup layouts
-        self.popupLayout = QVBoxLayout()        
-        self.popupLayout.addWidget(self.errorLabel)        
-        self.popupLayout.addWidget(self.okBtn)        
-        self.popUp.setLayout(self.popupLayout)
-        self.popUp.exec_()

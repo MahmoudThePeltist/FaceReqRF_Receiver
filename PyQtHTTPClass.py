@@ -23,6 +23,8 @@ class ShowIPVideo(QtCore.QObject):
         #facial recognission variables
         self.faceRec = facial_recognition()
         self.training_data_folder = 'training-data'
+        self.detMethod = 1
+        self.recMethod = 2
         self.face_recker = None  
         #image recording variables
         self.record = False
@@ -37,12 +39,17 @@ class ShowIPVideo(QtCore.QObject):
         #set the pause screen image
         self.pauseImageDir = self.localDir + '\images\FaceRecRFWait.png'
         self.pause_image = QtGui.QImage(self.pauseImageDir)
+        self.useXML = 0
     
     video_signal = QtCore.pyqtSignal(QtGui.QImage, name = 'vidSig')
-    label_signal = QtCore.pyqtSignal(int)
+    label_signal = QtCore.pyqtSignal(tuple)
     
     @QtCore.pyqtSlot()
     def startVideo(self):
+        self.faceRec.faceDetector = self.detMethod
+        self.faceRec.faceRecognizer = self.recMethod
+        print "\nWe are using face detector: " + str(self.faceRec.faceDetector)
+        print "We are using face recognizer: " + str(self.faceRec.faceRecognizer)
         if self.stream == 0:
             print "Connecting to: ",self.httpAddress
             self.stream = urllib.urlopen(str(self.httpAddress))
@@ -55,11 +62,16 @@ class ShowIPVideo(QtCore.QObject):
             if a != -1 and b != -1:
                 jpg = self.bytes[a:b+2]
                 self.bytes = self.bytes[b+2:]
-                frame = cv2.imdecode(np.fromstring(jpg, dtype=np.uint8), cv2.CV_LOAD_IMAGE_COLOR)
+                frame = cv2.imdecode(np.fromstring(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
                 #convert the BGR used by openCV to RGB used by PyQt   
                 color_swapped_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) 
                 #set default image label ("UNKNOWN")
-                image_label = [0]
+                image_label = (0,0)
+                #load a pretrained recognizer XML file
+                if self.face_recker is None and self.useXML is 1:
+                    print "No recognizer found, attepting to load one."
+                    self.face_recker = self.faceRec.load_recognizer(self.recMethod)
+                #perform recognition if recognizer exists
                 if self.face_recker is not None:
                     predicted_image, image_label = self.faceRec.predict(self.face_recker,color_swapped_image)
                 else:
@@ -75,7 +87,7 @@ class ShowIPVideo(QtCore.QObject):
                 self.pause_image = self.pause_image.scaled(width,height)
                 #emit the detection QImage
                 self.emitted_signal = self.video_signal.emit(self.qt_image)
-                self.another_signal = self.label_signal.emit(image_label[0])
+                self.another_signal = self.label_signal.emit(image_label)
                 #Recording all predicted frames in recording folder after reconverting the color
                 if self.record == True:
                     self.skip_count += 1
@@ -106,5 +118,4 @@ class ShowIPVideo(QtCore.QObject):
         
     def unpause_video(self):
         #this is called if the signal is disconnected
-        self.video_signal.emit(self.qt_image)
-        
+        self.video_signal.emit(self.qt_image)        

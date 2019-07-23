@@ -4,7 +4,6 @@ import sys
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-
 class errorBox(QDialog):
     """This class will display a dialog that contains exception info"""  
     
@@ -16,7 +15,7 @@ class errorBox(QDialog):
             self.localDir = os.path.dirname(sys.executable)
         else:
             # The application is not frozen
-            self.localDir = os.path.dirname(os.path.realpath(__file__))    
+            self.localDir = os.path.dirname(os.path.realpath(__file__))
         #set the window title and icon
         self.setWindowTitle("Error")
         self.setWindowIcon(QIcon(self.localDir + "/images/FaceReqRFIcon.png"))
