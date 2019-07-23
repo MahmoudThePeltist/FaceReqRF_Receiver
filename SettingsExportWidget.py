@@ -1,5 +1,6 @@
 from PyQt4.QtGui import *
 import os
+import sys
 
 class RecordingSettings(QDialog):
     """This class provides a settings window for recording and exporting"""
@@ -7,7 +8,12 @@ class RecordingSettings(QDialog):
     def __init__(self):
         super(RecordingSettings, self).__init__()
         #get local directory
-        self.localDir = os.path.dirname(os.path.realpath(__file__)) 
+        if getattr(sys, 'frozen', False):
+            # The application is frozen
+            self.localDir = os.path.dirname(sys.executable)
+        else:
+            # The application is not frozen
+            self.localDir = os.path.dirname(os.path.realpath(__file__))    
         #set the window title and icon
         self.setWindowTitle("Export Settings")
         self.setWindowIcon(QIcon(self.localDir + "/images/FaceReqRFIcon.png"))

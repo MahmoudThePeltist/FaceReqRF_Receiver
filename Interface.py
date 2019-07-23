@@ -1,10 +1,16 @@
 import sys
 import os
+#these imports are for cx_freeze
+import numpy.core._methods
+import numpy.lib.format
+#pyqt import
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from sqlite3 import *
 import datetime
 from moviepy.editor import ImageSequenceClip
+from moviepy.video.fx.fadein import fadein
+from moviepy.video.fx.fadeout import fadeout
 from socket import gethostbyname, gethostname
 #reception and display classes
 from PyQtCamClass import *
@@ -21,14 +27,21 @@ from SQLiteDBClass import *
 from ManuallyAddFace import *
 #facial recognition class
 from CV2FacRecClass import *
+#help and error dialogs
 from DialogHelp import *
+from DialogError import *
 
 class mainWindow(QMainWindow):
     def __init__(self):
         #call super user constructor
         super(mainWindow,self).__init__()  
         #set window title and icon
-        self.localDir = os.path.dirname(os.path.realpath(__file__)) 
+        if getattr(sys, 'frozen', False):
+            # The application is frozen
+            self.localDir = os.path.dirname(sys.executable)
+        else:
+            # The application is not frozen
+            self.localDir = os.path.dirname(os.path.realpath(__file__))    
         #set window title and icon                       
         self.setWindowTitle("FaceReqRF - Main Menu")
         self.setWindowIcon(QIcon(self.localDir + "/images/FaceReqRFIcon.png"))
@@ -184,6 +197,10 @@ class mainWindow(QMainWindow):
             self.receive_btn.setText("<< Start Reception >>")  #change the text written on the btn
             
     def record_action(self):       
+        #Make sure recording directory exists
+        if not os.path.exists(self.localDir + "/recording"):
+            print "Directory: ", (self.localDir + "/recording"), " does not exist, creating..."
+            os.makedirs(self.localDir + "/recording")
         #we need to setup a folder to hold the recorded frames
         now = datetime.datetime.now()#get current date info
         folder_name = now.strftime("%Y%m%d") + "_" + str(self.transMeth)#folder name 'year+month+day_transmissionMethod'
@@ -215,12 +232,17 @@ class mainWindow(QMainWindow):
             for folderLoc in folderLocs:
                 #Export the recorder images as video using ffmpeg
                 print "Grabbing images from: ", str(folderLoc)
+                folderName = str(folderLoc)[-8:]#get the folder name (the last 8 characters) from the directory name
                 clip = ImageSequenceClip(str(folderLoc), fps = int(self.writeFPS))
-                print "Writing file..."
-                if self.writeMethod == 0:
-                    clip.write_videofile(self.localDir + "/exported/" + str(self.writeName) + ".avi",codec = str(self.writeCodec))
-                elif self.writeMethod == 1:            
-                    clip.write_gif(self.localDir + "/exported/" + str(self.writeName) + ".gif", program = str(self.writeProgram))
+                try:
+                    print "Writing file..."
+                    if self.writeMethod == 0:
+                        clip.write_videofile(self.localDir + "/exported/" + folderName + "_" + str(self.writeName) + ".avi",codec = str(self.writeCodec))
+                    elif self.writeMethod == 1:            
+                        clip.write_gif(self.localDir + "/exported/" + folderName + "_" + str(self.writeName) + ".gif", program = str(self.writeProgram))
+                except Exception as e:
+                    print "Writing exception check settings.\nException:" + str(e)
+                    errorBox("Writing exception check settings.\nException:" + str(e))
         
     def prepare_action(self):
         if self.receiving == True:
@@ -228,18 +250,26 @@ class mainWindow(QMainWindow):
             self.video.run_video = False #set the startVideo function flag off, so we pause rec
             self.receiving = False #set local flag
             self.receive_btn.setText("<< Start Reception >>")  #change the text written on the btn
-        print "Preparing images for training..."
-        self.video.prepare_pics(self.detMethod)
-        
+        try:
+            print "Preparing images for training..."
+            self.video.prepare_pics(self.detMethod)
+        except Exception as e:
+            print "Preperation error.\nException:" + str(e)
+            errorBox("Preperation error.\nException:" + str(e))
+            
     def train_action(self):
         if self.receiving == True:
             print "Pausing reception..."
             self.video.run_video = False #set the startVideo function flag off, so we pause rec
             self.receiving = False #set local flag
             self.receive_btn.setText("<< Start Reception >>")  #change the text written on the btn
-        print "Training using prepared images..."
-        self.video.train_algorithm(self.recMethod)
-    
+        try:
+            print "Training using prepared images..."
+            self.video.train_algorithm(self.recMethod)
+        except Exception as e:
+            print "Training error.\nException:" + str(e)
+            errorBox("Training error.\nException:" + str(e))
+            
     def add_action(self):
         print "Adding: "
         dbms = database_manager()
@@ -302,7 +332,7 @@ class mainWindow(QMainWindow):
         #add labels
         self.lf1 = QLabel("First Name: ")
         self.lf2 = QLabel("Last Name: ")
-        self.lf3 = QLabel("Position: ")
+        self.lf3 = QLabel("Wanted For: ")
         self.lf4 = QLabel("ID Number: ")
         #add textboxes
         self.lef1 = QLineEdit()
@@ -357,7 +387,7 @@ class mainWindow(QMainWindow):
         #add labels
         self.l1 = QLabel("First Name: ")
         self.l2 = QLabel("Last Name: ")
-        self.l3 = QLabel("Position: ")
+        self.l3 = QLabel("Wanted For: ")
         self.l4 = QLabel("ID Number: ")
         #add textboxes
         self.le1 = QLabel()
@@ -379,36 +409,53 @@ class mainWindow(QMainWindow):
         self.thread.start()
         #if we are using LAN reception use LAN classes
         if (self.transMeth == 0):
-            self.video = ShowReceivedVideo()
-            self.video.set_values(self.transMeth, self.host, self.port, self.buf)
-            self.video.moveToThread(self.thread)
-            self.image_viewer = ReceivedImageViewer()
+            try:
+                self.video = ShowReceivedVideo()
+                self.video.set_values(self.transMeth, self.host, self.port, self.buf)
+                self.video.moveToThread(self.thread)
+                self.image_viewer = ReceivedImageViewer()
+            except Exception as e:
+                print "Reception initialization error, check settings.\nException:" + str(e)
+                errorBox("Writing exception check settings.\nException:" + str(e))
         #if we are using local webcam use webcam classes
         elif (self.transMeth == 1):
-            self.video = ShowVideo()
-            #set the webcam port
-            if self.video.webcamPort != self.camPort:
-                self.video.webcamPort = self.camPort
-                self.video.camera = cv2.VideoCapture(self.camPort)
-            self.video.moveToThread(self.thread)
-            self.image_viewer = ImageViewer()
+            try:
+                self.video = ShowVideo()
+                #set the webcam port
+                if self.video.webcamPort != self.camPort:
+                    self.video.webcamPort = self.camPort
+                    self.video.camera = cv2.VideoCapture(self.camPort)
+                self.video.moveToThread(self.thread)
+                self.image_viewer = ImageViewer()
+            except Exception as e:
+                print "Reception initialization error, check settings.\nException:" + str(e)
+                errorBox("Writing exception check settings.\nException:" + str(e))
         #if we are using RTL-SDR use gnu classes
         elif (self.transMeth == 2):
-            self.video = windowCapture()
-            self.video.cropX1 = self.cropX1
-            self.video.cropY1 = self.cropY1
-            self.video.cropX2 = self.cropX2
-            self.video.cropY2 = self.cropY2
-            self.video.capWindowName = str(self.windowTitle)
-            self.video.capWindowResize = float(self.windowResize)
-            self.video.moveToThread(self.thread)
-            self.image_viewer = ImageViewer()
+            try:
+                self.video = windowCapture()
+                self.video.cropX1 = self.cropX1
+                self.video.cropY1 = self.cropY1
+                self.video.cropX2 = self.cropX2
+                self.video.cropY2 = self.cropY2
+                self.video.capWindowName = str(self.windowTitle)
+                self.video.capWindowResize = float(self.windowResize)
+                self.video.moveToThread(self.thread)
+                self.image_viewer = ImageViewer()
+            except Exception as e:
+                print "Reception initialization error, check settings.\nException:" + str(e)
+                errorBox("Writing exception check settings.\nException:" + str(e))
         #if we are using an IP camera
         elif (self.transMeth == 3):
-            self.video = ShowIPVideo()
-            self.video.httpAddress = self.httpAddress
-            self.video.moveToThread(self.thread)
-            self.image_viewer = ImageViewer()
+            try:
+                self.video = ShowIPVideo()
+                self.video.httpAddress = self.httpAddress
+                self.video.moveToThread(self.thread)
+                self.image_viewer = ImageViewer()                
+            except Exception as e:
+                print "Reception initialization error, check settings.\nException:" + str(e)
+                errorBox("Writing exception check settings.\nException:" + str(e))
+        #connect to the streams
         self.video.video_signal.connect(self.image_viewer.setImage)
         self.video.label_signal.connect(self.rec_form_set)
         #add buttons
@@ -460,7 +507,6 @@ class mainWindow(QMainWindow):
         #create widget to display this layout
         self.view_recognize_menu_widget = QWidget()
         self.view_recognize_menu_widget.setLayout(self.total_grid)
-
         self.video.run_video = False
 
 def main():

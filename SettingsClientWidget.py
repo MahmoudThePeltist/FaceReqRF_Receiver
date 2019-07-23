@@ -1,5 +1,6 @@
 from PyQt4.QtGui import *
 import os
+import sys
 
 class ReceptionSettings(QDialog):
     """This class provides a settings window for the server"""
@@ -7,7 +8,12 @@ class ReceptionSettings(QDialog):
     def __init__(self):
         super(ReceptionSettings, self).__init__()
         #get local directory
-        self.localDir = os.path.dirname(os.path.realpath(__file__)) 
+        if getattr(sys, 'frozen', False):
+            # The application is frozen
+            self.localDir = os.path.dirname(sys.executable)
+        else:
+            # The application is not frozen
+            self.localDir = os.path.dirname(os.path.realpath(__file__))    
         #set the window title and icon
         self.setWindowTitle("Reception Settings")
         self.setWindowIcon(QIcon(self.localDir + "/images/FaceReqRFIcon.png"))

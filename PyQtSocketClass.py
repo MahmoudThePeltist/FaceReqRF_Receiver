@@ -1,16 +1,23 @@
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 import os
+import sys
 from socket import *
 
 from CV2FacRecClass import *
+from DialogError import *
 
 class ShowReceivedVideo(QtCore.QObject):
  
     def __init__(self, parent = None):
         super(ShowReceivedVideo, self).__init__(parent)
         #get the local directory
-        self.localDir = os.path.dirname(os.path.realpath(__file__))
+        if getattr(sys, 'frozen', False):
+            # The application is frozen
+            self.localDir = os.path.dirname(sys.executable)
+        else:
+            # The application is not frozen
+            self.localDir = os.path.dirname(os.path.realpath(__file__))    
         #facial recognission variables
         self.faceRec = facial_recognition()
         self.training_data_folder = 'training-data'
@@ -90,14 +97,20 @@ class ShowReceivedVideo(QtCore.QObject):
         self.emitted_signal = self.video_signal.emit(self.pause_image)
                     
     def prepare_pics(self, detMethod):
-        self.faceRec.faceDetector = detMethod #Set the detector
-        #create all training images
-        self.faceRec.prepare_training_images(self.training_data_folder)
-
+        try:
+            self.faceRec.faceDetector = detMethod #Set the detector
+            self.faceRec.prepare_training_images(self.training_data_folder)#create all training images
+        except Exception as e:
+            print "Training exception check settings.\nException:" + str(e)
+            errorBox("Writing exception check settings.\nException:" + str(e))
+        
     def train_algorithm(self, recMethod):
-        self.faceRec.faceRecognizer = recMethod #Set the recogizer
-        #train and return recognizer
-        self.face_recker = self.faceRec.train(self.training_data_folder)
+        try:
+            self.faceRec.faceRecognizer = recMethod #Set the recogizer
+            self.face_recker = self.faceRec.train(self.training_data_folder)#train and return recognizer
+        except Exception as e:
+            print "Training exception check settings.\nException:" + str(e)
+            errorBox("Writing exception check settings.\nException:" + str(e))
         
     def unpause_video(self):
         #this is called if the signal is disconnected

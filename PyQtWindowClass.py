@@ -1,5 +1,7 @@
 import win32gui
 import win32ui
+import os
+import sys
 from ctypes import windll
 from PIL import Image
 from PyQt4 import QtCore
@@ -8,13 +10,19 @@ import numpy
 import cv2
 
 from CV2FacRecClass import *
+from DialogError import *
 
 class windowCapture(QtCore.QObject):
     
     def __init__(self, parent = None):
         super(windowCapture, self).__init__(parent)
         #get the local directory
-        self.localDir = os.path.dirname(os.path.realpath(__file__))
+        if getattr(sys, 'frozen', False):
+            # The application is frozen
+            self.localDir = os.path.dirname(sys.executable)
+        else:
+            # The application is not frozen
+            self.localDir = os.path.dirname(os.path.realpath(__file__))    
         #facial recognission variables
         self.faceRec = facial_recognition()
         self.training_data_folder = 'training-data'
@@ -37,6 +45,7 @@ class windowCapture(QtCore.QObject):
         self.cropY2 = 0
         self.toplist, self.winlist = [], []
         self.hwnd = 0
+        self.windowHeight = 700
         
     video_signal = QtCore.pyqtSignal(QtGui.QImage, name = 'vidSig')
     label_signal = QtCore.pyqtSignal(int)
@@ -46,11 +55,20 @@ class windowCapture(QtCore.QObject):
         #set the flag used to run the camera
         self.run_video = True
         while self.run_video:
-            ret, frame = self.getImage()
+            try:
+                ret, frame = self.getImage()
+            except Exception as e:
+                print "Image get exception check window name.\nException:" + str(e)
+                errorBox("Writing exception check window name.\nException:" + str(e))               
             if ret:            
                 self.newY2 = frame.shape[0] - self.cropY2 #image height - pixels to crop
                 self.newX2 = frame.shape[1] - self.cropX2 #image width - pixels to crop
-                cropFrame = frame[int(self.cropY1):self.newY2, int(self.cropX1):self.newX2] #crop    
+                cropFrame = frame[int(self.cropY1):self.newY2, int(self.cropX1):self.newX2] #crop
+                height, width = cropFrame.shape[:2]
+                if 900 > height > 600:
+                    cropFrame = cv2.resize(cropFrame,(0,0),fx=0.6,fy=0.6)
+                elif height > 900:
+                    cropFrame = cv2.resize(cropFrame,(0,0),fx=0.4,fy=0.4)
                 #resize image
                 newFrame = cv2.resize(cropFrame,(0,0),fx=self.capWindowResize,fy=self.capWindowResize)
                 #set default image label ("UNKNOWN")
@@ -85,14 +103,20 @@ class windowCapture(QtCore.QObject):
         self.emitted_signal = self.video_signal.emit(self.pause_image)
         
     def prepare_pics(self, detMethod):
-        self.faceRec.faceDetector = detMethod #Set the detector
-        #create all training images
-        self.faceRec.prepare_training_images(self.training_data_folder)
-
+        try:
+            self.faceRec.faceDetector = detMethod #Set the detector
+            self.faceRec.prepare_training_images(self.training_data_folder)#create all training images
+        except Exception as e:
+            print "Training exception check settings.\nException:" + str(e)
+            errorBox("Writing exception check settings.\nException:" + str(e))
+        
     def train_algorithm(self, recMethod):
-        self.faceRec.faceRecognizer = recMethod #Set the recogizer
-        #train and return recognizer
-        self.face_recker = self.faceRec.train(self.training_data_folder)
+        try:
+            self.faceRec.faceRecognizer = recMethod #Set the recogizer
+            self.face_recker = self.faceRec.train(self.training_data_folder)#train and return recognizer
+        except Exception as e:
+            print "Training exception check settings.\nException:" + str(e)
+            errorBox("Writing exception check settings.\nException:" + str(e))
         
     def unpause_video(self):
         #this is called if the signal is disconnected

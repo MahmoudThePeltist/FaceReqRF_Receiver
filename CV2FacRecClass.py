@@ -1,6 +1,7 @@
 import cv2
 import time
 import os
+import sys
 import numpy as np
 from SQLiteDBClass import *
 
@@ -8,7 +9,12 @@ class facial_recognition():
 
     def __init__(self, parent = None):
         #set window title and icon
-        self.localDir = os.path.dirname(os.path.realpath(__file__))
+        if getattr(sys, 'frozen', False):
+            # The application is frozen
+            self.localDir = os.path.dirname(sys.executable)
+        else:
+            # The application is not frozen
+            self.localDir = os.path.dirname(os.path.realpath(__file__))    
         self.faceDetector = 1
         self.faceRecognizer = 2        
         

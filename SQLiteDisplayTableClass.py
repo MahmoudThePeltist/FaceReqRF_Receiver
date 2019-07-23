@@ -2,6 +2,8 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 import sqlite3
 import os
+import sys
+import shutil
 
 class DisplayClass(QDialog):
     """This class displays a table of entered people"""
@@ -9,7 +11,12 @@ class DisplayClass(QDialog):
     def __init__(self):
         super(DisplayClass, self).__init__()
         #get local directory
-        self.localDir = os.path.dirname(os.path.realpath(__file__))
+        if getattr(sys, 'frozen', False):
+            # The application is frozen
+            self.localDir = os.path.dirname(sys.executable)
+        else:
+            # The application is not frozen
+            self.localDir = os.path.dirname(os.path.realpath(__file__))    
         #set the window title, icon and geometry  
         self.setWindowTitle("Table Display")
         self.setWindowIcon(QIcon(self.localDir + "/images/FaceReqRFIcon.png"))
@@ -22,8 +29,13 @@ class DisplayClass(QDialog):
         #get the values from the database
         self.sqlite_file = self.localDir + '/database/my_db.sqlite'
         self.tbl_name = 'Employees';
-        self.conn = sqlite3.connect(self.sqlite_file)
-        self.c = self.conn.cursor()
+        #connect to table and create cursor
+        try:
+            self.conn = sqlite3.connect(self.sqlite_file)
+            self.c = self.conn.cursor()
+        except:
+            print "Database connect Error, check if database exists."
+            self.errorBox("Database connect Error, check if database exists.")
         self.c.execute('SELECT * FROM {tn}'.\
             format(tn=self.tbl_name))
         self.tableValues = self.c.fetchall()
@@ -83,9 +95,31 @@ class DisplayClass(QDialog):
     #delete row from table
     def deleteRow(self):
         #try to delete a specific row
-        self.c.execute('DELETE FROM {tn} WHERE ID={pk}'.\
-            format(tn=self.tbl_name,pk=int(self.delTxt.text())))
-        print "Row with ID:",self.delTxt.text(), " Deleted."
+        if True:
+            self.c.execute('DELETE FROM {tn} WHERE ID={pk}'.\
+                format(tn=self.tbl_name,pk=int(self.delTxt.text())))
+            print "Row with ID:",self.delTxt.text(), " Deleted."
+            #find the directories to the j folder and s folder for the deleted ID
+            jPath = str(self.localDir + "/training-data/" + "j" + self.delTxt.text())
+            sPath = str(self.localDir + "/training-data/" + "s" + self.delTxt.text())
+            #if j directory exists, delete it
+            if os.path.exists(jPath):
+                try:
+                    shutil.rmtree(jPath)
+                except OSError as e:
+                    print ("Error: %s - %s." % (e.filename, e.strerror))
+                    self.errorBox("Error: %s - %s." % (e.filename, e.strerror))
+            else:
+                print jPath + " does not exist."
+            #if s directory exists, delete it
+            if os.path.exists(sPath):
+                try:
+                    shutil.rmtree(sPath)
+                except OSError as e:
+                    print ("Error: %s - %s." % (e.filename, e.strerror))
+                    self.errorBox("Error: %s - %s." % (e.filename, e.strerror))
+            else:
+                print sPath + " does not exist."
         self.conn.commit()
         self.conn.close()
         self.delTxt.setText("")
@@ -97,7 +131,8 @@ class DisplayClass(QDialog):
             self.conn = sqlite3.connect(self.sqlite_file)
             self.c = self.conn.cursor()
         except:
-            print "Probably already open"
+            print "Database connect error, is probably already open."
+            self.errorBox("Database connect error, is probably already open.")
         self.c.execute('SELECT * FROM {tn}'.\
             format(tn=self.tbl_name))
         self.tableValues = self.c.fetchall()
@@ -113,3 +148,19 @@ class DisplayClass(QDialog):
                 item.setFlags(Qt.ItemIsEnabled)#make the item non editable
                 self.displayTable.setItem(self.row, self.col, item) #display item in table
             self.row += 1
+    
+    def errorBox(self, errorText):
+        self.popUp = QDialog()
+        self.popUp.setWindowTitle("Error")
+        self.popUp.setWindowIcon(QIcon(self.localDir + "/images/FaceReqRFIcon.png"))
+        #add buttons label and textbox
+        self.errorLabel = QLabel(errorText)
+        self.okBtn = QPushButton("Ok")
+        #add connection
+        self.okBtn.clicked.connect(self.popUp.close)
+        #setup layouts
+        self.popupLayout = QVBoxLayout()        
+        self.popupLayout.addWidget(self.errorLabel)        
+        self.popupLayout.addWidget(self.okBtn)        
+        self.popUp.setLayout(self.popupLayout)
+        self.popUp.exec_()

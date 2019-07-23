@@ -1,6 +1,7 @@
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 import os
+import sys
 from shutil import copyfile
 
 #reception and display classes
@@ -12,7 +13,12 @@ class faceChoice(QDialog):
     def __init__(self):
         super(faceChoice,self).__init__()
         #set local directory, title and icon        
-        self.localDir = os.path.dirname(os.path.realpath(__file__))                        
+        if getattr(sys, 'frozen', False):
+            # The application is frozen
+            self.localDir = os.path.dirname(sys.executable)
+        else:
+            # The application is not frozen
+            self.localDir = os.path.dirname(os.path.realpath(__file__))                        
         self.setWindowTitle("Adding face folder")
         self.setWindowIcon(QIcon(self.localDir + "/images/FaceReqRFIcon.png"))
         #variables        
