@@ -1,5 +1,6 @@
 from PyQt4 import QtCore
 from PyQt4 import QtGui
+import os
 
 from socket import *
 from CV2FacRecClass import *
@@ -8,17 +9,22 @@ class ShowReceivedVideo(QtCore.QObject):
  
     def __init__(self, parent = None):
         super(ShowReceivedVideo, self).__init__(parent)
+        #facial recognission variables
         self.faceRec = facial_recognition()
         self.training_data_folder = 'training-data'
         self.face_recker = None
-        #set the pause screen image
-        self.pause_image = QtGui.QImage('images\FaceRecRFWait.png')
-        self.host = "127.0.0.1"
+        #image recording variables
+        self.record = False
+        self.skip_value = 1
+        self.skip_count = 0
+        self.record_count = 0
+        #Socket variables
+        self.host = gethostbyname(gethostname())
         self.port = 4096
         self.buf = 1024
         self.fName = 'frames/frame3.jpg'
-        self.timeOut = 0.05
-        self.addr = (self.host, self.port)
+        #set the pause screen image
+        self.pause_image = QtGui.QImage('images\FaceRecRFWait.png')
 
     
     video_signal = QtCore.pyqtSignal(QtGui.QImage, name = 'vidSig')
@@ -28,26 +34,28 @@ class ShowReceivedVideo(QtCore.QObject):
     def startVideo(self):
         #set the flag used to run the camera
         self.run_video = True
+        #open a socket that communicates with Internet Protocol v4 addresses (AF_INET) using UDP (SOCK_DGRAM)
+        s = socket()
+        self.addr = (self.host, self.port)
+        print "Reciving from: ", self.addr
+        s.bind(self.addr)
         while self.run_video:
-            s = socket(AF_INET, SOCK_DGRAM)
-            s.bind(self.addr)
-            
-            data, address = s.recvfrom(self.buf)
-            f = open(data, 'wb')
-            
-            data, address = s.recvfrom(self.buf)
-            
-            try:
-                while(data):
-                    f.write(data)
-                    s.settimeout(self.timeOut)
-                    data, address = s.recvfrom(self.buf)
-            except timeout:
-                f.close()
-                s.close()
-            frame = cv2.imread(self.fName)
-            #convert the BGR used by openCV to RGB used by PyQt   
-            color_swapped_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) 
+            f = open('frames/frame3.jpg', 'wb')
+            s.listen(5)                    
+            c, addr = s.accept()     # Establish connection with client.
+            print 'Got connection from', addr
+            print "Receiving..."
+            l = c.recv(self.buf)
+            while (l):
+                f.write(l)
+                l = c.recv(self.buf)
+            f.close()   # Close the recived file
+            print "Done Receiving"
+            c.send('Thank you for connecting')
+            c.close()    # Close the connection            
+            frame = cv2.imread('frames/frame3.jpg')
+            #convert the BGR used by openCV to RGB used by PyQt
+            color_swapped_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             #set default image label ("UNKNOWN")
             image_label = [0]
             if self.face_recker is not None:
@@ -64,16 +72,25 @@ class ShowReceivedVideo(QtCore.QObject):
                                         
             self.emitted_signal = self.video_signal.emit(self.qt_image)
             self.another_signal = self.label_signal.emit(image_label[0])
+            #Recording all predicted frames in recording folder after reconverting the color
+            if self.record == True:
+                self.skip_count += 1
+                if self.skip_count > self.skip_value:                        
+                    image2save = cv2.cvtColor(predicted_image, cv2.COLOR_RGB2BGR) 
+                    cv2.imwrite("recording/img%d.jpg" % self.record_count,image2save)
+                    self.record_count += 1
+                    self.skip_count = 0
             
         #set the default image and transmit it
         self.emitted_signal = self.video_signal.emit(self.pause_image)
                     
-        
-    def prepare_pics(self):
+    def prepare_pics(self, detMethod):
+        self.faceRec.faceDetector = detMethod #Set the detector
         #create all training images
         self.faceRec.prepare_training_images(self.training_data_folder)
 
-    def train_algorithm(self):        
+    def train_algorithm(self, recMethod):
+        self.faceRec.faceRecognizer = recMethod #Set the recogizer
         #train and return recognizer
         self.face_recker = self.faceRec.train(self.training_data_folder)
         
@@ -81,12 +98,11 @@ class ShowReceivedVideo(QtCore.QObject):
         #this is called if the signal is disconnected
         self.video_signal.emit(self.qt_image)
         
-    def set_values(self, gottenMethod, gottenAddress, gottenPort, gottenBuffer, gottenTimeout):
+    def set_values(self, gottenMethod, gottenAddress, gottenPort, gottenBuffer):
         self.transMeth = gottenMethod
         self.host = gottenAddress
         self.port = gottenPort
         self.buf = gottenBuffer
-        self.timeOut = gottenTimeout
         
 class ReceivedImageViewer(QtGui.QWidget):
     def __init__(self, parent = None):

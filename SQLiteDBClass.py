@@ -8,7 +8,7 @@ class database_manager():
         self.conn = sqlite3.connect(sqlite_file)
         self.c = self.conn.cursor()
 
-    #function to create a new database
+    #function to create a new database table
     def create_table(self,table_name1, new_field, field_type, prim_key = 0):   
         prim_key_txt = ""    
         if prim_key == 1:

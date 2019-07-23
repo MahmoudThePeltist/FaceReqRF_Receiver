@@ -5,10 +5,21 @@ from SQLiteDBClass import *
 
 class facial_recognition():
 
+    def __init__(self, parent = None):
+        self.localDir = os.path.dirname(os.path.realpath(__file__))
+        self.faceDetector = 1
+        self.faceRecognizer = 2        
+        
     def detect_face(self, image):
-        #face detection is the same as the one i did before
-        grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        cascade_classifier = cv2.CascadeClassifier('training-data/lbpcascades/lbpcascade_frontalface.xml')
+        #face detection using lbp cascade classifier
+        grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) #get grayscale image
+        if self.faceDetector == 0:
+            trainerLocation = self.localDir + '/training-data/haarcascades/haarcascade_frontalface_alt.xml'
+        elif self.faceDetector == 1:
+            trainerLocation = self.localDir + '/training-data/lbpcascades/lbpcascade_frontalface.xml'
+        elif self.faceDetector == 2:
+            trainerLocation = self.localDir + '/training-data/lbpcascades/lbpcascade_frontalface_improved.xml'
+        cascade_classifier = cv2.CascadeClassifier(trainerLocation)
         faces = cascade_classifier.detectMultiScale(grayscale_image, scaleFactor=1.2, minNeighbors=5);
         #skip all faces exept the fist one
         if(len(faces) == 0):
@@ -16,6 +27,7 @@ class facial_recognition():
         x, y, w, h = faces[0]
         #return the face only
         return grayscale_image[y:y+w, x:x+h], faces[0]
+
     def prepare_training_images(self, data_folder_path):
         #go through the directory and find folders
         dirs = os.listdir(data_folder_path)
@@ -82,13 +94,10 @@ class facial_recognition():
                 image = cv2.imread(image_path)
                 cv2.imshow("Training on image...", image)
                 cv2.waitKey(100)
-                #detect face
-                face, rect = self.detect_face(image)
-                #if face is real add to list            
-                if face is not None:
-                    faces_list.append(face)
-                    labels_list.append(label)
-                    cv2.destroyAllWindows()
+                grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                faces_list.append(grayscale_image)
+                labels_list.append(label)
+                cv2.destroyAllWindows()
                 cv2.waitKey(1)
             cv2.destroyAllWindows()
         #return the list of faces and the list of lables for training
@@ -100,9 +109,14 @@ class facial_recognition():
         print "Preparing data..."
         faces, labels = self.prepare_training_data(data_folder_path)
         print "Data prepared"
-        print "Number of faces: ", len(faces), "/nNumber of labels: ", len(labels)
+        print "Number of faces: ", len(faces), "\nNumber of labels: ", len(labels)
         print "Creating recognizer..."
-        face_recognizer = cv2.createLBPHFaceRecognizer()
+        if self.faceRecognizer == 0:
+            face_recognizer = cv2.createEigenFaceRecognizer()
+        elif self.faceRecognizer == 1:
+            face_recognizer = cv2.createFisherFaceRecognizer()
+        elif self.faceRecognizer == 2:
+            face_recognizer = cv2.createLBPHFaceRecognizer()
         print "Training..."
         face_recognizer.train(faces, np.array(labels))
         print "Fininished training!"
@@ -123,8 +137,9 @@ class facial_recognition():
         face, rect = self.detect_face(image)
         #Predict then get the name of the person
         if not face is None:
-            label = face_recognizer.predict(face)
-            db = database_manager()
+            resized_face = cv2.resize(face,(350,350))
+            label = face_recognizer.predict(resized_face) #
+            db = database_manager() #access the database, to get the personal info
             first_name = db.get_value('"First Name"','Employees','ID', label[0])
             last_name = db.get_value('"Last Name"','Employees','ID', label[0])
             label_text = first_name[0][0] + " " + last_name[0][0]
@@ -133,5 +148,12 @@ class facial_recognition():
             self.draw_text(image, label_text, rect[0], rect[1]-5)      
             #return the image and the label
             return image, label
-        #return the image and a zero if it was not returned already
-        return image, [0]
+        elif not rect is None:
+            #Draw the rectangle and text on the image
+            self.draw_rectangle(image, rect)
+            self.draw_text(image, "Unknown", rect[0], rect[1]-5)  
+            #return the image and a zero if it was not returned already
+            return image, [0]
+        else:
+            #return the image and a zero if it was not returned already
+            return image, [0]

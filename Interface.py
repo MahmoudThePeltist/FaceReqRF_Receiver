@@ -1,12 +1,23 @@
 import sys
+import os
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from sqlite3 import *
+from moviepy.editor import ImageSequenceClip
+from socket import gethostbyname, gethostname
 
 from Cam2PyQtClass import *
 from Socket2PyQtClass import *
-from ClientSettingsWidget import *
+from HTTP2PyQtClass import *
 
+from ClientSettingsWidget import *
+from FaceSettingsWidget import *
+from ExportSettingsWidget import *
+from SQLiteDisplayTableClass import *
+try:
+    from GNURadioIQReciver import *
+except:
+    print "GNURadioIQReciver import error."
 from CV2FacRecClass import *
 from SQLiteDBClass import *
 
@@ -15,10 +26,14 @@ class mainWindow(QMainWindow):
     def __init__(self):
         #call super user constructor
         super(mainWindow,self).__init__()  
-        #set window title
+        #set window title and icon
+        self.localDir = os.path.dirname(os.path.realpath(__file__))                        
         self.setWindowTitle("FaceReqRF - Main Menu")
+        self.setWindowIcon(QIcon(self.localDir + "/images/FaceReqRFIcon.png"))
         #call the function to create the window
         self.create_main_menu_layout()
+        #stylesheet
+        self.setStyleSheet("QPushButton {background-color: #7a92ba; height:30%; border: none; color:white; font-size:16px;} QPushButton:hover{background-color: #5370a0}")
         #create stacked layout
         self.stacked_layout = QStackedLayout()
         self.stacked_layout.addWidget(self.select_main_menu_widget)
@@ -26,12 +41,29 @@ class mainWindow(QMainWindow):
         self.central_widget = QWidget()
         self.central_widget.setLayout(self.stacked_layout)
         self.setCentralWidget(self.central_widget)
-        #variables
+        #reception variables
         self.transMeth = 0
-        self.host = "127.0.0.1"
+        self.host = gethostbyname(gethostname())
         self.port = 4096
         self.buf = 1024
-        self.timeOut = 0.05
+        self.frequency = 440e6
+        self.sampRate = 500e3
+        #button flags
+        self.recording = False
+        self.receiving = False
+        self.firstRun = True
+        #Detection and Recognition flags
+        self.detMethod = 1
+        self.recMethod = 2
+        #recording variables
+        self.recordSkip = 2
+        self.writeFPS = 10
+        self.writeMethod = 0
+        self.writeName = 'recording'
+        self.writeCodec = "libx264" #libx264 or mpeg4 or rawvideo or png or libvorbis or libvpx
+        self.writeProgram = "imageio" #imageio or ImageMagick or ffmpeg
+        #IP Cam variable
+        self.httpAdress = 'http://192.168.23.2:4747/mjpegfeed'
         
     def create_main_menu_layout(self):
         #image in main window:
@@ -39,30 +71,38 @@ class mainWindow(QMainWindow):
         self.back_image.setPixmap(QPixmap('images\FaceRecRFBackground.png'))
         self.back_image.setScaledContents(1)
         #several buttons:
-        self.b1 = QPushButton("Start Reciving")
+        self.b1 = QPushButton("Start Receiving")
         self.b2 = QPushButton("Add New Face")
         self.b3 = QPushButton("Reception Settings")
-        self.b4 = QPushButton("Help")
-        self.b5 = QPushButton("Quit")
+        self.b4 = QPushButton("Det/Rec Settings")
+        self.b5 = QPushButton("Recording Settings")
+        self.b6 = QPushButton("Help")
+        self.b7 = QPushButton("Quit")
         #Connections:
         self.b1.clicked.connect(self.recognize_window)
         self.b2.clicked.connect(self.face_window)
-        self.b3.clicked.connect(self.modifySettings)
-        self.b4.clicked.connect(self.help_window)
-        self.b5.clicked.connect(self.quit_window)
+        self.b3.clicked.connect(self.modifyReceptionSettings)
+        self.b4.clicked.connect(self.modifyDetRecSettings)
+        self.b5.clicked.connect(self.modifyRecordingSettings)
+        self.b6.clicked.connect(self.help_window)
+        self.b7.clicked.connect(self.quit_window)
         #Create the main layout
         self.vBox = QVBoxLayout()
         #add widgets to layput
         self.vBox.addWidget(self.back_image)
         self.vBox.addWidget(self.b1)
         self.vBox.addWidget(self.b2)
-        self.vBox.addWidget(self.b3)
         #create layout for horizontal buttons and add them to it        
-        self.hBox = QHBoxLayout()
-        self.hBox.addWidget(self.b4)
-        self.hBox.addWidget(self.b5)
+        self.hBox1 = QHBoxLayout()     
+        self.hBox2 = QHBoxLayout()
+        self.hBox1.addWidget(self.b3)
+        self.hBox1.addWidget(self.b4)
+        self.hBox1.addWidget(self.b5)  
+        self.hBox2.addWidget(self.b6)
+        self.hBox2.addWidget(self.b7)
         #add horizontal layout to vertical layout
-        self.vBox.addLayout(self.hBox)
+        self.vBox.addLayout(self.hBox1)
+        self.vBox.addLayout(self.hBox2)
         #create main widget and set it's layout
         self.select_main_menu_widget = QWidget()
         self.select_main_menu_widget.setLayout(self.vBox)
@@ -86,6 +126,7 @@ class mainWindow(QMainWindow):
         self.stacked_layout.setCurrentWidget(self.view_face_menu_widget)
         
     def help_window(self):
+        #create a small window that contains basic information about the app using QMessageBox
         print "showing help window..."
         self.msg = QMessageBox()
         self.msg.setIcon(QMessageBox.Information)
@@ -96,15 +137,32 @@ class mainWindow(QMainWindow):
         self.msg.setStandardButtons(QMessageBox.Ok)
         self.msg.exec_()
         
-    def modifySettings(self):
-        #instantiate the dialog box
-        self.settings_dialog = ReceptionSettings()
+    def modifyReceptionSettings(self):
+        self.reception_dialog = ReceptionSettings()#instantiate the dialog box
         #set values
-        self.settings_dialog.setValues(self.transMeth,self.host,self.port,self.buf,self.timeOut)
+        self.reception_dialog.setValues(self.transMeth,self.host,self.port,self.buf,self.frequency, self.sampRate, self.httpAdress)
         print "Running dialog box."
-        self.settings_dialog.exec_()
+        self.reception_dialog.exec_()
         print "Getting setting values."
-        self.transMeth,self.host,self.port,self.buf,self.timeOut = self.settings_dialog.getValues()
+        self.transMeth,self.host,self.port,self.buf,self.frequency, self.sampRate, self.httpAdress = self.reception_dialog.getValues()
+        
+    def modifyDetRecSettings(self):
+        self.reception_dialog = DetRecSettings()#instantiate the dialog box
+        #set values
+        self.reception_dialog.setValues(self.detMethod,self.recMethod)
+        print "Running dialog box."
+        self.reception_dialog.exec_()
+        print "Getting setting values."
+        self.detMethod, self.recMethod = self.reception_dialog.getValues()
+        
+    def modifyRecordingSettings(self):
+        self.recording_dialog = RecordingSettings()#instantiate the dialog box
+        #set values
+        self.recording_dialog.setValues(self.writeMethod,self.recordSkip,self.writeName,self.writeFPS)
+        print "Running dialog box."
+        self.recording_dialog.exec_()
+        print "Getting setting values."
+        self.writeMethod,self.recordSkip,self.writeName,self.writeFPS,self.writeCodec,self.writeProgram = self.recording_dialog.getValues()
         
     def main_window(self):
         print "showing main window..."
@@ -114,20 +172,51 @@ class mainWindow(QMainWindow):
         print "Quiting..."
         self.close()
         
-    def start_action(self):
-        print "Starting video..."
+    def receive_action(self):
+        #if we are receiving pause and if we are paused start receiving
+        if self.receiving == False:
+            #call self.video.startVideo() func with this click() see func where btn is defined for more info
+            self.invisible_start_btn.click()
+            self.receiving = True #set local flag            
+            print "Starting reception..."
+            self.receive_btn.setText(">> Pause Reception <<") #change the text written on the btn
+        elif self.receiving == True:
+            print "Pausing reception..."
+            self.video.run_video = False #set the startVideo function flag off, so we pause rec
+            self.receiving = False #set local flag
+            self.receive_btn.setText("<< Start Reception >>")  #change the text written on the btn
+            
+    def record_action(self):
+        #Start or stop recording the frames being displayed
+        if self.recording == False:
+            print "Recording all images!"
+            self.video.skip_value = self.recordSkip
+            self.video.record = True #Start recording all images by setting the record flag = true
+            self.record_btn.setText(">> Stop Recording <<")
+            self.recording = True #set local flag
+        elif self.recording == True:
+            print "Stopping recording of images!"
+            self.video.record = False #Stop recording images by setting the record flag = false
+            self.record_btn.setText("<< Start Recording >>")
+            self.recording = False
         
-    def stop_action(self):
-        print "Pausing Video..."
-        self.video.run_video = False
+    def export_action(self):
+        #Export the recorder images as video using ffmpeg
+        print "Grabbing images..."
+        clip = ImageSequenceClip("recording", fps = int(self.writeFPS))
+        print "Writing file..."
+        if self.writeMethod == 0:
+            clip.write_videofile(str(self.writeName) + ".avi",codec = str(self.writeCodec))
+        elif self.writeMethod == 1:            
+            clip.write_gif(str(self.writeName) + ".gif", program = str(self.writeProgram))
         
     def prepare_action(self):
         print "Preparing images for training..."
-        self.video.prepare_pics()
+        self.video.prepare_pics(self.detMethod)
         
     def train_action(self):
         print "Training using prepared images..."
-        self.video.train_algorithm()
+        self.video.train_algorithm(self.recMethod)
     
     def add_action(self):
         print "Adding: "
@@ -147,9 +236,19 @@ class mainWindow(QMainWindow):
         dbms.add_value('Employees','ID','Last Name',id_number,last_name) 
         dbms.add_value('Employees','ID','Position',id_number,position) 
         dbms.add_value('Employees','ID','File Name',id_number,img_folder) 
-        #commit and close the database        
-        dbms.commit_close()
-        print 'Data added'
+        dbms.commit_close()#commit and close the database   
+        print 'Data added'    
+        self.lef1.setText("")
+        self.lef2.setText("")
+        self.lef3.setText("")
+        self.lef4.setText("")
+        self.lef5.setText("")
+    
+    def display_table(self):
+        self.database_dialog = DisplayClass()#instantiate the dialog box
+        print "Running dialog box."
+        self.database_dialog.exec_()
+                
         
     def rec_form_set(self, my_label):
         #function to set the lables in the reception page
@@ -197,9 +296,11 @@ class mainWindow(QMainWindow):
         self.lef5.setFont(font_A)
         #add buttons
         self.add_btn = QPushButton("Add")
+        self.table_btn = QPushButton("Display Table")
         self.bck_btn = QPushButton("Back")
         #Connections:
         self.add_btn.clicked.connect(self.add_action)
+        self.table_btn.clicked.connect(self.display_table)
         self.bck_btn.clicked.connect(self.main_window)
         #create layouts
         self.form_grid = QGridLayout()
@@ -219,7 +320,8 @@ class mainWindow(QMainWindow):
         self.form_grid.addWidget(self.lef5,4,1)
         #add buttons to layout
         self.button_grid.addWidget(self.add_btn,0,0)
-        self.button_grid.addWidget(self.bck_btn,0,1)
+        self.button_grid.addWidget(self.table_btn,0,1)
+        self.button_grid.addWidget(self.bck_btn,0,2)
         #add everything to the total grid layout
         self.total_layout.addWidget(self.form_image)
         self.total_layout.addLayout(self.form_grid)
@@ -255,7 +357,7 @@ class mainWindow(QMainWindow):
         #if we are using LAN reception use LAN classes
         if (self.transMeth == 0):
             self.video = ShowReceivedVideo()
-            self.video.set_values(self.transMeth, self.host, self.port, self.buf, self.timeOut)
+            self.video.set_values(self.transMeth, self.host, self.port, self.buf)
             self.video.moveToThread(self.thread)
             self.image_viewer = ReceivedImageViewer()
         #if we are using local webcam use webcam classes
@@ -265,21 +367,33 @@ class mainWindow(QMainWindow):
             self.image_viewer = ImageViewer()
         #if we are using RTL-SDR use gnu classes
         elif (self.transMeth == 2):
-            print "TO BE DONE!"
-        #if we are using hackRF then TO BE DONE!
+            print "Not Finished"
+            #self.IQReciver = GNURadioIQReciver()
+            #self.IQReciver.set_channel_freq(self.frequency)
+            #self.IQReciver.set_samp_rate(self.sampRate)
+        #if we are using local webcam use webcam classes
+        elif (self.transMeth == 3):
+            self.video = ShowIPVideo()
+            self.video.httpAdress = self.httpAdress
+            self.video.moveToThread(self.thread)
+            self.image_viewer = ImageViewer()
         self.video.video_signal.connect(self.image_viewer.setImage)
         self.video.label_signal.connect(self.rec_form_set)
-        #add values        
         #add buttons
-        self.start_btn = QPushButton("<< Start >>")
-        self.stop_btn = QPushButton("<< Pause >>")
+        self.receive_btn = QPushButton("<< Start Reception >>")
+        self.record_btn = QPushButton("<< Start Recording >>")
+        self.export_btn = QPushButton("|| Export Recording ||")
         self.prep_btn = QPushButton("Prepare Training Images")
         self.train_btn = QPushButton("Train Recognizer")
         self.back_btn = QPushButton("Back")
+        #next is a button designed to do nothing but start receiving, this is to "fix" the crash
+        #that happens when self.video.startVideo() is called anywhere ouside of a button click
+        self.invisible_start_btn = QPushButton("you should not be seeing this")
+        self.invisible_start_btn.clicked.connect(self.video.startVideo)
         #Connections:
-        self.start_btn.clicked.connect(self.start_action)
-        self.start_btn.clicked.connect(self.video.startVideo)
-        self.stop_btn.clicked.connect(self.stop_action)
+        self.receive_btn.clicked.connect(self.receive_action)
+        self.record_btn.clicked.connect(self.record_action)
+        self.export_btn.clicked.connect(self.export_action)
         self.prep_btn.clicked.connect(self.prepare_action)
         self.train_btn.clicked.connect(self.train_action)
         self.back_btn.clicked.connect(self.main_window)
@@ -299,17 +413,18 @@ class mainWindow(QMainWindow):
         self.form_grid.addWidget(self.le3,2,1)
         self.form_grid.addWidget(self.le4,3,1)
         #add buttons to button grid
-        self.first_button_grid.addWidget(self.start_btn,0,0)
-        self.first_button_grid.addWidget(self.stop_btn,0,1)
+        self.first_button_grid.addWidget(self.receive_btn,0,0)
+        self.first_button_grid.addWidget(self.record_btn,1,0)
+        self.first_button_grid.addWidget(self.export_btn,2,0)
         #add buttons to button grid
         self.second_button_grid.addWidget(self.prep_btn,0,0)
-        self.second_button_grid.addWidget(self.train_btn,0,1)
+        self.second_button_grid.addWidget(self.train_btn,1,0)
+        self.second_button_grid.addWidget(self.back_btn,2,0)
         #add everything to the total grid layout
         self.total_grid.addWidget(self.image_viewer,0,0)
         self.total_grid.addLayout(self.form_grid,0,1)
         self.total_grid.addLayout(self.first_button_grid,1,0)
         self.total_grid.addLayout(self.second_button_grid,1,1)
-        self.total_grid.addWidget(self.back_btn,2,1)
         #create widget to display this layout
         self.view_recognize_menu_widget = QWidget()
         self.view_recognize_menu_widget.setLayout(self.total_grid)
