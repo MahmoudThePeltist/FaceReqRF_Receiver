@@ -1,151 +1,131 @@
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
-##################################################
-# GNU Radio Python Flow Graph
-# Title: Gnuradioiqreciver
-# Generated: Sun Sep  9 20:59:11 2018
-##################################################
+import win32gui
+import win32ui
+from ctypes import windll
+from PIL import Image
+from PyQt4 import QtCore
+from PyQt4 import QtGui
+import numpy 
+import cv2
 
-if __name__ == '__main__':
-    import ctypes
-    import sys
-    if sys.platform.startswith('linux'):
-        try:
-            x11 = ctypes.cdll.LoadLibrary('libX11.so')
-            x11.XInitThreads()
-        except:
-            print "Warning: failed to XInitThreads()"
+from CV2FacRecClass import *
 
-from PyQt4 import Qt
-from gnuradio import eng_notation
-from gnuradio import gr
-from gnuradio import qtgui
-from gnuradio.eng_option import eng_option
-from gnuradio.filter import firdes
-from optparse import OptionParser
-import osmosdr
-import sip
-import sys
-import time
-from gnuradio import qtgui
+class windowCapture(QtCore.QObject):
+    
+    def __init__(self, parent = None):
+        super(windowCapture, self).__init__(parent)
+        #facial recognission variables
+        self.faceRec = facial_recognition()
+        self.training_data_folder = 'training-data'
+        self.face_recker = None
+        #image recording variables
+        self.record = False
+        self.skip_value = 1
+        self.skip_count = 0
+        self.record_count = 0
+        #screen capture values
+        self.windowName = '440'
+        self.toplist, self.winlist = [], []
+        self.hwnd = 0
+        
+    video_signal = QtCore.pyqtSignal(QtGui.QImage, name = 'vidSig')
+    label_signal = QtCore.pyqtSignal(int)
+    
+    @QtCore.pyqtSlot()
+    def startVideo(self):
+        #set the flag used to run the camera
+        self.run_video = True
+        while self.run_video:
+            ret, frame = self.getImage()
+            if ret:               
+                frame = cv2.resize(frame,(0,0),fx=0.8,fy=0.8)
+                #convert the BGR used by openCV to RGB used by PyQt   
+                color_swapped_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) 
+                #set default image label ("UNKNOWN")
+                image_label = [0]
+                if self.face_recker is not None:
+                    predicted_image, image_label = self.faceRec.predict(self.face_recker,color_swapped_image)
+                else:
+                    predicted_image = color_swapped_image
+                height, width, _ = predicted_image.shape
+                
+                self.qt_image = QtGui.QImage(predicted_image.data,
+                                        width,
+                                        height,
+                                        predicted_image.strides[0],
+                                        QtGui.QImage.Format_RGB888)
+                                        
+ 
+                self.emitted_signal = self.video_signal.emit(self.qt_image)
+                self.another_signal = self.label_signal.emit(image_label[0])
+                #Recording all predicted frames in recording folder after reconverting the color
+                if self.record == True:
+                    self.skip_count += 1
+                    if self.skip_count > self.skip_value:                        
+                        image2save = cv2.cvtColor(predicted_image, cv2.COLOR_RGB2BGR) 
+                        cv2.imwrite("recording/img%d.jpg" % self.record_count,image2save)
+                        self.record_count += 1
+                        self.skip_count = 0
+                        
+        #set the default image and transmit it
+        self.emitted_signal = self.video_signal.emit(self.pause_image)
+        
+    def prepare_pics(self, detMethod):
+        self.faceRec.faceDetector = detMethod #Set the detector
+        #create all training images
+        self.faceRec.prepare_training_images(self.training_data_folder)
 
-
-class GNURadioIQReciver(gr.top_block, Qt.QWidget):
-
-    def __init__(self):
-        gr.top_block.__init__(self, "Gnuradioiqreciver")
-        Qt.QWidget.__init__(self)
-        self.setWindowTitle("Gnuradioiqreciver")
-        qtgui.util.check_set_qss()
-        try:
-            self.setWindowIcon(Qt.QIcon.fromTheme('gnuradio-grc'))
-        except:
-            pass
-        self.top_scroll_layout = Qt.QVBoxLayout()
-        self.setLayout(self.top_scroll_layout)
-        self.top_scroll = Qt.QScrollArea()
-        self.top_scroll.setFrameStyle(Qt.QFrame.NoFrame)
-        self.top_scroll_layout.addWidget(self.top_scroll)
-        self.top_scroll.setWidgetResizable(True)
-        self.top_widget = Qt.QWidget()
-        self.top_scroll.setWidget(self.top_widget)
-        self.top_layout = Qt.QVBoxLayout(self.top_widget)
-        self.top_grid_layout = Qt.QGridLayout()
-        self.top_layout.addLayout(self.top_grid_layout)
-
-        self.settings = Qt.QSettings("GNU Radio", "GNURadioIQReciver")
-        self.restoreGeometry(self.settings.value("geometry").toByteArray())
-
-
-        ##################################################
-        # Variables
-        ##################################################
-        self.samp_rate = samp_rate = 500e3
-        self.channel_freq = channel_freq = 440e6
-
-        ##################################################
-        # Blocks
-        ##################################################
-        self.rtlsdr_source_0 = osmosdr.source( args="numchan=" + str(1) + " " + '' )
-        self.rtlsdr_source_0.set_sample_rate(samp_rate)
-        self.rtlsdr_source_0.set_center_freq(channel_freq, 0)
-        self.rtlsdr_source_0.set_freq_corr(0, 0)
-        self.rtlsdr_source_0.set_dc_offset_mode(0, 0)
-        self.rtlsdr_source_0.set_iq_balance_mode(0, 0)
-        self.rtlsdr_source_0.set_gain_mode(False, 0)
-        self.rtlsdr_source_0.set_gain(10, 0)
-        self.rtlsdr_source_0.set_if_gain(20, 0)
-        self.rtlsdr_source_0.set_bb_gain(20, 0)
-        self.rtlsdr_source_0.set_antenna('', 0)
-        self.rtlsdr_source_0.set_bandwidth(0, 0)
-
-        self.qtgui_sink_x_0 = qtgui.sink_c(
-        	32768, #fftsize
-        	firdes.WIN_BLACKMAN_hARRIS, #wintype
-        	channel_freq, #fc
-        	samp_rate, #bw
-        	"", #name
-        	False, #plotfreq
-        	True, #plotwaterfall
-        	False, #plottime
-        	False, #plotconst
-        )
-        self.qtgui_sink_x_0.set_update_time(1.0/10)
-        self._qtgui_sink_x_0_win = sip.wrapinstance(self.qtgui_sink_x_0.pyqwidget(), Qt.QWidget)
-        self.top_grid_layout.addWidget(self._qtgui_sink_x_0_win)
-
-        self.qtgui_sink_x_0.enable_rf_freq(False)
-
-
-
-
-
-
-        ##################################################
-        # Connections
-        ##################################################
-        self.connect((self.rtlsdr_source_0, 0), (self.qtgui_sink_x_0, 0))
-
-    def closeEvent(self, event):
-        self.settings = Qt.QSettings("GNU Radio", "GNURadioIQReciver")
-        self.settings.setValue("geometry", self.saveGeometry())
-        event.accept()
-
-    def get_samp_rate(self):
-        return self.samp_rate
-
-    def set_samp_rate(self, samp_rate):
-        self.samp_rate = samp_rate
-        self.rtlsdr_source_0.set_sample_rate(self.samp_rate)
-        self.qtgui_sink_x_0.set_frequency_range(self.channel_freq, self.samp_rate)
-
-    def get_channel_freq(self):
-        return self.channel_freq
-
-    def set_channel_freq(self, channel_freq):
-        self.channel_freq = channel_freq
-        self.rtlsdr_source_0.set_center_freq(self.channel_freq, 0)
-        self.qtgui_sink_x_0.set_frequency_range(self.channel_freq, self.samp_rate)
-
-
-def main(top_block_cls=GNURadioIQReciver, options=None):
-
-    from distutils.version import StrictVersion
-    if StrictVersion(Qt.qVersion()) >= StrictVersion("4.5.0"):
-        style = gr.prefs().get_string('qtgui', 'style', 'raster')
-        Qt.QApplication.setGraphicsSystem(style)
-    qapp = Qt.QApplication(sys.argv)
-
-    tb = top_block_cls()
-    tb.start()
-    tb.show()
-
-    def quitting():
-        tb.stop()
-        tb.wait()
-    qapp.connect(qapp, Qt.SIGNAL("aboutToQuit()"), quitting)
-    qapp.exec_()
-
-
-if __name__ == '__main__':
-    main()
+    def train_algorithm(self, recMethod):
+        self.faceRec.faceRecognizer = recMethod #Set the recogizer
+        #train and return recognizer
+        self.face_recker = self.faceRec.train(self.training_data_folder)
+        
+    def unpause_video(self):
+        #this is called if the signal is disconnected
+        self.video_signal.emit(self.qt_image)
+        
+    def getImage(self):        
+        #collect a list of all windows matching the ID and their window text
+        def enum_cb(hwnd, results):
+            self.winlist.append((hwnd, win32gui.GetWindowText(hwnd)))
+        win32gui.EnumWindows(enum_cb, self.toplist)
+        #create the list
+        self.windowList = [(self.hwnd, title) for self.hwnd, title in self.winlist if self.windowName in title.lower()]
+        #take the hwnd for first window matching the ID
+        self.hwndList = self.windowList[0]
+        self.hwnd = self.hwndList[0]
+        print self.hwnd
+        # get the values for the client area.
+        left, top, right, bot = win32gui.GetClientRect(self.hwnd)
+        w = right - left
+        h = bot - top
+        
+        hwndDC = win32gui.GetWindowDC(self.hwnd)
+        mfcDC  = win32ui.CreateDCFromHandle(hwndDC)
+        saveDC = mfcDC.CreateCompatibleDC()
+        saveBitMap = win32ui.CreateBitmap()
+        saveBitMap.CreateCompatibleBitmap(mfcDC, w, h)
+        saveDC.SelectObject(saveBitMap)
+    
+        # Change the line below depending on whether you want the whole window
+        # or just the client area. 
+        self.result = windll.user32.PrintWindow(self.hwnd, saveDC.GetSafeHdc(), 1)
+        #result = windll.user32.PrintWindow(hwnd, saveDC.GetSafeHdc(), 0)
+        print self.result
+        
+        bmpinfo = saveBitMap.GetInfo()
+        bmpstr = saveBitMap.GetBitmapBits(True)
+        
+        pilImage = Image.frombuffer(
+            'RGB',
+            (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
+            bmpstr, 'raw', 'BGRX', 0, 1)
+            
+        win32gui.DeleteObject(saveBitMap.GetHandle())
+        saveDC.DeleteDC()
+        mfcDC.DeleteDC()
+        win32gui.ReleaseDC(self.hwnd, hwndDC)
+        
+        if self.result != 0:
+            #PrintWindow Succeeded
+            self.imageArray = numpy.array(pilImage)
+        return self.result, self.imageArray

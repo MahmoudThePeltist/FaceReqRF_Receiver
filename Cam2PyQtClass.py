@@ -20,10 +20,11 @@ class ShowVideo(QtCore.QObject):
         self.record_count = 0
         #set the pause screen image
         self.pause_image = QtGui.QImage('images\FaceRecRFWait.png')
-    
-    #initialize camera
-    camera = cv2.VideoCapture(1)
+        #initialize camera
+        self.webcamPort = None
+        self.camera = None
         
+
     video_signal = QtCore.pyqtSignal(QtGui.QImage, name = 'vidSig')
     label_signal = QtCore.pyqtSignal(int)
     
@@ -87,7 +88,6 @@ class ImageViewer(QtGui.QWidget):
         self.image = QtGui.QImage(self.default_image,"PNG")
         self.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
  
- 
     def paintEvent(self, event):
         painter = QtGui.QPainter(self)
         painter.drawImage(0,0, self.image)
@@ -97,7 +97,6 @@ class ImageViewer(QtGui.QWidget):
     def setImage(self, image):
         if image.isNull():
             print("Viewer Dropped frame!")
- 
         self.image = image
         if image.size() != self.size():
             self.setFixedSize(image.size())

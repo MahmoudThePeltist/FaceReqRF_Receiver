@@ -25,7 +25,6 @@ class ShowReceivedVideo(QtCore.QObject):
         self.fName = 'frames/frame3.jpg'
         #set the pause screen image
         self.pause_image = QtGui.QImage('images\FaceRecRFWait.png')
-
     
     video_signal = QtCore.pyqtSignal(QtGui.QImage, name = 'vidSig')
     label_signal = QtCore.pyqtSignal(int)
@@ -112,7 +111,6 @@ class ReceivedImageViewer(QtGui.QWidget):
         self.image = QtGui.QImage(self.default_image,"PNG")
         self.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
  
- 
     def paintEvent(self, event):
         painter = QtGui.QPainter(self)
         painter.drawImage(0,0, self.image)
@@ -122,7 +120,6 @@ class ReceivedImageViewer(QtGui.QWidget):
     def setImage(self, image):
         if image.isNull():
             print("Viewer Dropped frame!")
- 
         self.image = image
         if image.size() != self.size():
             self.setFixedSize(image.size())

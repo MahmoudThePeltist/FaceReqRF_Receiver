@@ -14,10 +14,7 @@ from ClientSettingsWidget import *
 from FaceSettingsWidget import *
 from ExportSettingsWidget import *
 from SQLiteDisplayTableClass import *
-try:
-    from GNURadioIQReciver import *
-except:
-    print "GNURadioIQReciver import error."
+from GNURadioIQReciver import *
 from CV2FacRecClass import *
 from SQLiteDBClass import *
 
@@ -62,8 +59,9 @@ class mainWindow(QMainWindow):
         self.writeName = 'recording'
         self.writeCodec = "libx264" #libx264 or mpeg4 or rawvideo or png or libvorbis or libvpx
         self.writeProgram = "imageio" #imageio or ImageMagick or ffmpeg
-        #IP Cam variable
-        self.httpAdress = 'http://192.168.23.2:4747/mjpegfeed'
+        
+        self.httpAddress = 'http://192.168.23.2:4747/mjpegfeed'#IP Cam variable
+        self.camPort = 1 #local webcam port
         
     def create_main_menu_layout(self):
         #image in main window:
@@ -118,10 +116,8 @@ class mainWindow(QMainWindow):
         
     def face_window(self):
         print "Showing face window..."
-        #Create the add face layout
-        self.create_face_window() 
-        #add this to the stack
-        self.stacked_layout.addWidget(self.view_face_menu_widget)
+        self.create_face_window() #Create the add face layout
+        self.stacked_layout.addWidget(self.view_face_menu_widget)#add this to the stack
         #change the visible layout in the stack
         self.stacked_layout.setCurrentWidget(self.view_face_menu_widget)
         
@@ -140,11 +136,11 @@ class mainWindow(QMainWindow):
     def modifyReceptionSettings(self):
         self.reception_dialog = ReceptionSettings()#instantiate the dialog box
         #set values
-        self.reception_dialog.setValues(self.transMeth,self.host,self.port,self.buf,self.frequency, self.sampRate, self.httpAdress)
+        self.reception_dialog.setValues(self.transMeth,self.host,self.port,self.buf,self.frequency, self.sampRate, self.httpAddress, self.camPort)
         print "Running dialog box."
         self.reception_dialog.exec_()
         print "Getting setting values."
-        self.transMeth,self.host,self.port,self.buf,self.frequency, self.sampRate, self.httpAdress = self.reception_dialog.getValues()
+        self.transMeth,self.host,self.port,self.buf,self.frequency, self.sampRate, self.httpAddress, self.camPort  = self.reception_dialog.getValues()
         
     def modifyDetRecSettings(self):
         self.reception_dialog = DetRecSettings()#instantiate the dialog box
@@ -211,10 +207,20 @@ class mainWindow(QMainWindow):
             clip.write_gif(str(self.writeName) + ".gif", program = str(self.writeProgram))
         
     def prepare_action(self):
+        if self.receiving == True:
+            print "Pausing reception..."
+            self.video.run_video = False #set the startVideo function flag off, so we pause rec
+            self.receiving = False #set local flag
+            self.receive_btn.setText("<< Start Reception >>")  #change the text written on the btn
         print "Preparing images for training..."
         self.video.prepare_pics(self.detMethod)
         
     def train_action(self):
+        if self.receiving == True:
+            print "Pausing reception..."
+            self.video.run_video = False #set the startVideo function flag off, so we pause rec
+            self.receiving = False #set local flag
+            self.receive_btn.setText("<< Start Reception >>")  #change the text written on the btn
         print "Training using prepared images..."
         self.video.train_algorithm(self.recMethod)
     
@@ -247,8 +253,7 @@ class mainWindow(QMainWindow):
     def display_table(self):
         self.database_dialog = DisplayClass()#instantiate the dialog box
         print "Running dialog box."
-        self.database_dialog.exec_()
-                
+        self.database_dialog.exec_()                
         
     def rec_form_set(self, my_label):
         #function to set the lables in the reception page
@@ -363,18 +368,20 @@ class mainWindow(QMainWindow):
         #if we are using local webcam use webcam classes
         elif (self.transMeth == 1):
             self.video = ShowVideo()
+            #set the webcam port
+            if self.video.webcamPort != self.camPort:
+                self.video.webcamPort = self.camPort
+                self.video.camera = cv2.VideoCapture(self.camPort)
             self.video.moveToThread(self.thread)
             self.image_viewer = ImageViewer()
         #if we are using RTL-SDR use gnu classes
         elif (self.transMeth == 2):
-            print "Not Finished"
-            #self.IQReciver = GNURadioIQReciver()
-            #self.IQReciver.set_channel_freq(self.frequency)
-            #self.IQReciver.set_samp_rate(self.sampRate)
-        #if we are using local webcam use webcam classes
+            self.video = windowCapture()
+            self.video.moveToThread(self.thread)
+            self.image_viewer = ImageViewer()
         elif (self.transMeth == 3):
             self.video = ShowIPVideo()
-            self.video.httpAdress = self.httpAdress
+            self.video.httpAddress = self.httpAddress
             self.video.moveToThread(self.thread)
             self.image_viewer = ImageViewer()
         self.video.video_signal.connect(self.image_viewer.setImage)

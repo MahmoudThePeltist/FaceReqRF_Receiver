@@ -2,7 +2,7 @@ from PyQt4.QtGui import *
 import os
 
 class DetRecSettings(QDialog):
-    """This class provides a settings window for detection and recognission"""
+    """This class provides a settings window for detection and recognition"""
     
     def __init__(self):
         super(DetRecSettings, self).__init__()
