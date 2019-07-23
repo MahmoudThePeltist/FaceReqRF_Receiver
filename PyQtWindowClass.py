@@ -20,15 +20,21 @@ class windowCapture(QtCore.QObject):
         self.training_data_folder = 'training-data'
         self.face_recker = None
         #set the pause screen image
-        self.pause_image = QtGui.QImage(self.localDir + '\images\FaceRecRFWait.png')
+        self.pauseImageDir = self.localDir + '\images\FaceRecRFWait.png'
+        self.pause_image = QtGui.QImage(self.pauseImageDir)
         #image recording variables
         self.record = False
+        self.recordingFolder = self.localDir + "/recording/"
         self.skip_value = 1
         self.skip_count = 0
         self.record_count = 0
         #screen capture values
         self.capWindowName = '440'
         self.capWindowResize = 1
+        self.cropX1 = 0
+        self.cropY1 = 30
+        self.cropX2 = 0
+        self.cropY2 = 0
         self.toplist, self.winlist = [], []
         self.hwnd = 0
         
@@ -41,23 +47,29 @@ class windowCapture(QtCore.QObject):
         self.run_video = True
         while self.run_video:
             ret, frame = self.getImage()
-            if ret:               
-                frame = cv2.resize(frame,(0,0),fx=self.capWindowResize,fy=self.capWindowResize)
+            if ret:            
+                self.newY2 = frame.shape[0] - self.cropY2 #image height - pixels to crop
+                self.newX2 = frame.shape[1] - self.cropX2 #image width - pixels to crop
+                cropFrame = frame[int(self.cropY1):self.newY2, int(self.cropX1):self.newX2] #crop    
+                #resize image
+                newFrame = cv2.resize(cropFrame,(0,0),fx=self.capWindowResize,fy=self.capWindowResize)
                 #set default image label ("UNKNOWN")
                 image_label = [0]
                 if self.face_recker is not None:
-                    predicted_image, image_label = self.faceRec.predict(self.face_recker,frame)
+                    predicted_image, image_label = self.faceRec.predict(self.face_recker,newFrame)
                 else:
-                    predicted_image = frame
+                    predicted_image = self.faceRec.justDetect(newFrame)
+                #get the dimensions of the image
                 height, width, _ = predicted_image.shape
-                
+                #convert the detection cv2 image into a QImage
                 self.qt_image = QtGui.QImage(predicted_image.data,
                                         width,
                                         height,
                                         predicted_image.strides[0],
                                         QtGui.QImage.Format_RGB888)
-                                        
- 
+                #resize pause image
+                self.pause_image = self.pause_image.scaled(width,height)
+                #emit the detection QImage
                 self.emitted_signal = self.video_signal.emit(self.qt_image)
                 self.another_signal = self.label_signal.emit(image_label[0])
                 #Recording all predicted frames in recording folder after reconverting the color
@@ -65,11 +77,11 @@ class windowCapture(QtCore.QObject):
                     self.skip_count += 1
                     if self.skip_count > self.skip_value:                        
                         image2save = cv2.cvtColor(predicted_image, cv2.COLOR_RGB2BGR) 
-                        cv2.imwrite(self.localDir + "/recording/img%d.jpg" % self.record_count,image2save)
+                        cv2.imwrite(self.recordingFolder + "img%d.jpg" % self.record_count,image2save)
                         self.record_count += 1
                         self.skip_count = 0
                         
-        #set the default image and transmit it
+        #set the pause image and transmit it
         self.emitted_signal = self.video_signal.emit(self.pause_image)
         
     def prepare_pics(self, detMethod):

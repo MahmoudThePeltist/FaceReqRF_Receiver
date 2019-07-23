@@ -146,7 +146,7 @@ class facial_recognition():
         #Predict then get the name of the person
         if not face is None:
             resized_face = cv2.resize(face,(350,350))
-            label = face_recognizer.predict(resized_face) #
+            label = face_recognizer.predict(resized_face)
             db = database_manager() #access the database, to get the personal info
             first_name = db.get_value('"First Name"','Employees','ID', label[0])
             last_name = db.get_value('"Last Name"','Employees','ID', label[0])
@@ -156,12 +156,20 @@ class facial_recognition():
             self.draw_text(image, label_text, rect[0], rect[1]-5)      
             #return the image and the label
             return image, label
-        elif not rect is None:
-            #Draw the rectangle and text on the image
-            self.draw_rectangle(image, rect)
-            self.draw_text(image, "Unknown", rect[0], rect[1]-5)  
-            #return the image and a zero if it was not returned already
-            return image, [0]
         else:
             #return the image and a zero if it was not returned already
             return image, [0]
+            
+    def justDetect(self, the_image):
+        image = the_image
+        face, rect = self.detect_face(image)
+        #Predict then get the name of the person
+        if not face is None:#Draw the rectangle and text on the image
+            #Draw the rectangle and text on the image
+            self.draw_rectangle(image, rect)
+            self.draw_text(image, " ", rect[0], rect[1]-5)  
+            #return the image and a zero if it was not returned already
+            return image
+        else:
+            #return the image and a zero if it was not returned already
+            return image

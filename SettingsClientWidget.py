@@ -47,15 +47,20 @@ class ReceptionSettings(QDialog):
         self.label3 = QLabel("Buffer: ")
         self.label4 = QLabel("Receiver Title: ")
         self.label5 = QLabel("Image Resize: ")
-        self.label6 = QLabel("HTTP feed address: ")
-        self.label7 = QLabel("Camera Port: ")
+        self.label6 = QLabel("Image Crop: ")
+        self.label7 = QLabel("HTTP feed address: ")
+        self.label8 = QLabel("Camera Port: ")
         self.textBox1 = QLineEdit()
         self.textBox2 = QLineEdit()
         self.textBox3 = QLineEdit()
         self.textBox4 = QLineEdit()
         self.textBox5 = QLineEdit()
-        self.textBox6 = QLineEdit()
+        self.textBox6a = QLineEdit()
+        self.textBox6b = QLineEdit()
+        self.textBox6c = QLineEdit()
+        self.textBox6d = QLineEdit()
         self.textBox7 = QLineEdit()
+        self.textBox8 = QLineEdit()
         self.SettingsSubmitButton = QPushButton("Submit")
         #create layouts
         self.LAN_setting_form_grid = QGridLayout()
@@ -63,22 +68,30 @@ class ReceptionSettings(QDialog):
         self.RTL_setting_form_grid = QGridLayout()
         self.HTTP_setting_form_grid = QGridLayout()
         self.setting_total_layout = QVBoxLayout()
+        #add textboxes of crop to their own layout
+        self.crop_textboxes = QHBoxLayout()
+        self.crop_textboxes.addWidget(self.textBox6a)
+        self.crop_textboxes.addWidget(self.textBox6b)
+        self.crop_textboxes.addWidget(self.textBox6c)
+        self.crop_textboxes.addWidget(self.textBox6d)
         #add lable widgets to the grid layout
         self.LAN_setting_form_grid.addWidget(self.label1,0,0)
         self.LAN_setting_form_grid.addWidget(self.label2,1,0)
         self.LAN_setting_form_grid.addWidget(self.label3,2,0)
-        self.LWC_setting_form_grid.addWidget(self.label7,0,0)
+        self.LWC_setting_form_grid.addWidget(self.label8,0,0)
         self.RTL_setting_form_grid.addWidget(self.label4,0,0)
         self.RTL_setting_form_grid.addWidget(self.label5,1,0)
-        self.HTTP_setting_form_grid.addWidget(self.label6,0,0)
+        self.RTL_setting_form_grid.addWidget(self.label6,2,0)
+        self.HTTP_setting_form_grid.addWidget(self.label7,0,0)
         #add line edit widgets to the grid layout
         self.LAN_setting_form_grid.addWidget(self.textBox1,0,1)
         self.LAN_setting_form_grid.addWidget(self.textBox2,1,1)
         self.LAN_setting_form_grid.addWidget(self.textBox3,2,1)
-        self.LWC_setting_form_grid.addWidget(self.textBox7,0,1)
+        self.LWC_setting_form_grid.addWidget(self.textBox8,0,1)
         self.RTL_setting_form_grid.addWidget(self.textBox4,0,1)
         self.RTL_setting_form_grid.addWidget(self.textBox5,1,1)
-        self.HTTP_setting_form_grid.addWidget(self.textBox6,0,1)
+        self.RTL_setting_form_grid.addLayout(self.crop_textboxes,2,1)
+        self.HTTP_setting_form_grid.addWidget(self.textBox7,0,1)
         #Create group boxes             
         self.LAN_group_box = QGroupBox("LAN Settings:") 
         self.LWC_group_box = QGroupBox("Local WebCam Settings:") 
@@ -102,7 +115,7 @@ class ReceptionSettings(QDialog):
         self.SettingsSubmitButton.clicked.connect(self.close)
         
     #function to set the textbox default values
-    def setValues(self, transMethod, gottenAddress, gottenPort, gottenBuffer, gottenFrequency, gottenSampRate, gottenHTTPAdress, gottenCamPort):
+    def setValues(self, transMethod, gottenAddress, gottenPort, gottenBuffer, gottenFrequency, gottenSampRate, gottenX1, gottenY1, gottenX2, gottenY2, gottenHTTPAdress, gottenCamPort):
         print "Current reception method: ", transMethod
         print "Current LAN settings: ", gottenAddress, gottenPort, gottenBuffer
         print "Current RTL settings: ", gottenFrequency, gottenSampRate
@@ -136,16 +149,20 @@ class ReceptionSettings(QDialog):
         self.textBox3.setText(str(gottenBuffer))
         self.textBox4.setText(str(gottenFrequency))
         self.textBox5.setText(str(gottenSampRate))
-        self.textBox6.setText(str(gottenHTTPAdress))
-        self.textBox7.setText(str(gottenCamPort))
+        self.textBox6a.setText(str(gottenX1))
+        self.textBox6b.setText(str(gottenY1))
+        self.textBox6c.setText(str(gottenX2))
+        self.textBox6d.setText(str(gottenY2))
+        self.textBox7.setText(str(gottenHTTPAdress))
+        self.textBox8.setText(str(gottenCamPort))
         
     #function to return the new entered values
     def getValues(self):
         print "New reception method: ", self.radio_button_group.checkedId()
         print "New LAN settings: ", self.textBox1.text(), int(self.textBox2.text()), int (self.textBox3.text())
         print "New RTL settings: ", self.textBox4.text(), self.textBox5.text()
-        print "New HTTP address: ", self.textBox6.text(), " __ New webcam port: ", self.textBox7.text()
-        return self.radio_button_group.checkedId() , self.textBox1.text(), int(self.textBox2.text()), int (self.textBox3.text()), self.textBox4.text(), self.textBox5.text(), self.textBox6.text(), int(self.textBox7.text())
+        print "New HTTP address: ", self.textBox7.text(), " __ New webcam port: ", self.textBox8.text()
+        return self.radio_button_group.checkedId() , self.textBox1.text(), int(self.textBox2.text()), int (self.textBox3.text()), self.textBox4.text(), self.textBox5.text(), int(self.textBox6a.text()), int(self.textBox6b.text()), int(self.textBox6c.text()), int(self.textBox6d.text()), self.textBox7.text(), int(self.textBox8.text())
         
     #functions to control which settings are enabled or disabled
     def clicked_LAN(self):

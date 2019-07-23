@@ -21,7 +21,7 @@ class database_manager():
         self.c.execute('CREATE TABLE {tn} ("{nf}" {ft} {pk})'\
             .format(tn=table_name1, nf=new_field, ft=field_type, pk = prim_key_txt)) 
 
-    #function to add a new column to an existing data
+    #function to add a new column to an existing table
     def add_column(self,table_name, new_column, column_type):    
         self.c.execute('ALTER TABLE {tn} ADD COLUMN "{cn}" {ct}'\
             .format(tn = table_name, cn = new_column, ct = column_type))

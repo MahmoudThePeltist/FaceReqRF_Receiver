@@ -65,19 +65,21 @@ class faceChoice(QDialog):
         self.close()
 
     def getfiles(self):
-      dlg = QFileDialog()#instantiate QFileDialog object
-      #set the selection mode to "ExistingFiles" so we can select muliple images
-      dlg.setFileMode(QFileDialog.ExistingFiles)
-      #set the filter so that we can only select image files
-      dlg.setFilter("Image files (*.jpg)")
-      fileNames = QStringList() #create a QstringList to hold the list of files
-      if dlg.exec_(): #if the dialog box is executed
-         fileNames = dlg.selectedFiles()#get the list of files from the dialog box
-         for fileLoc in fileNames:
-             print fileLoc
-             newFile = self.localDir + "/training-data/" + self.folderName + self.fileCount + ".jpg"
-             copyfile(fileLoc,newFile)
-             self.fileCount +=1
+        print "Directory: ", (self.localDir + "/training-data/" + self.folderName), " does not exist, creating..."
+        os.makedirs(self.localDir + "/training-data/" + self.folderName)
+        dlg = QFileDialog()#instantiate QFileDialog object
+        #set the selection mode to "ExistingFiles" so we can select muliple images
+        dlg.setFileMode(QFileDialog.ExistingFiles)
+        #set the filter so that we can only select image files
+        dlg.setFilter("Image files (*.jpg)")
+        fileNames = QStringList() #create a QstringList to hold the list of files
+        if dlg.exec_(): #if the dialog box is executed
+             fileNames = dlg.selectedFiles()#get the list of files from the dialog box
+             for fileLoc in fileNames:
+                 print fileLoc
+                 newFile = self.localDir + "/training-data/" + self.folderName + "/" + str(self.fileCount) + ".jpg"
+                 copyfile(fileLoc,newFile)
+                 self.fileCount +=1
              
         
 class imageCapture(QDialog):

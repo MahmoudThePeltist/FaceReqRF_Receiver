@@ -3,6 +3,7 @@ import os
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from sqlite3 import *
+import datetime
 from moviepy.editor import ImageSequenceClip
 from socket import gethostbyname, gethostname
 #reception and display classes
@@ -49,6 +50,10 @@ class mainWindow(QMainWindow):
         self.buf = 1024
         self.windowTitle = 'firefox'
         self.windowResize = 1
+        self.cropX1 = 0
+        self.cropY1 = 30
+        self.cropX2 = 0
+        self.cropY2 = 0
         #button flags
         self.recording = False
         self.receiving = False
@@ -69,7 +74,7 @@ class mainWindow(QMainWindow):
     def create_main_menu_layout(self):
         #image in main window:
         self.back_image = QLabel()
-        self.back_image.setPixmap(QPixmap('images\FaceRecRFBackground.png'))
+        self.back_image.setPixmap(QPixmap(self.localDir + '\images\FaceRecRFBackground.png'))
         self.back_image.setScaledContents(1)
         #several buttons:
         self.b1 = QPushButton("Start Receiving")
@@ -132,11 +137,11 @@ class mainWindow(QMainWindow):
     def modifyReceptionSettings(self):
         self.reception_dialog = ReceptionSettings()#instantiate the dialog box
         #set values
-        self.reception_dialog.setValues(self.transMeth,self.host,self.port,self.buf,self.windowTitle, self.windowResize, self.httpAddress, self.camPort)
+        self.reception_dialog.setValues(self.transMeth,self.host,self.port,self.buf,self.windowTitle, self.windowResize,self.cropX1,self.cropY1,self.cropX2,self.cropY2, self.httpAddress, self.camPort)
         print "Running dialog box."
         self.reception_dialog.exec_()
         print "Getting setting values."
-        self.transMeth,self.host,self.port,self.buf,self.windowTitle, self.windowResize, self.httpAddress, self.camPort  = self.reception_dialog.getValues()
+        self.transMeth,self.host,self.port,self.buf,self.windowTitle, self.windowResize,self.cropX1,self.cropY1,self.cropX2,self.cropY2, self.httpAddress, self.camPort  = self.reception_dialog.getValues()
         
     def modifyDetRecSettings(self):
         self.reception_dialog = DetRecSettings()#instantiate the dialog box
@@ -178,10 +183,18 @@ class mainWindow(QMainWindow):
             self.receiving = False #set local flag
             self.receive_btn.setText("<< Start Reception >>")  #change the text written on the btn
             
-    def record_action(self):
+    def record_action(self):       
+        #we need to setup a folder to hold the recorded frames
+        now = datetime.datetime.now()#get current date info
+        folder_name = now.strftime("%Y%m%d") + "_" + str(self.transMeth)#folder name 'year+month+day_transmissionMethod'
+        #if folder does not exist create it
+        if not os.path.exists(self.localDir + "/recording/" + folder_name):
+            print "Directory: ", (self.localDir + "/recording/" + folder_name), " does not exist, creating..."
+            os.makedirs(self.localDir + "/recording/" + folder_name)
         #Start or stop recording the frames being displayed
         if self.recording == False:
             print "Recording all images!"
+            self.video.recordingFolder = self.localDir + "/recording/" + folder_name + "/"
             self.video.skip_value = self.recordSkip
             self.video.record = True #Start recording all images by setting the record flag = true
             self.record_btn.setText(">> Stop Recording <<")
@@ -193,14 +206,21 @@ class mainWindow(QMainWindow):
             self.recording = False
         
     def export_action(self):
-        #Export the recorder images as video using ffmpeg
-        print "Grabbing images..."
-        clip = ImageSequenceClip("recording", fps = int(self.writeFPS))
-        print "Writing file..."
-        if self.writeMethod == 0:
-            clip.write_videofile("exported/" + str(self.writeName) + ".avi",codec = str(self.writeCodec))
-        elif self.writeMethod == 1:            
-            clip.write_gif("exported/" + str(self.writeName) + ".gif", program = str(self.writeProgram))
+        #get the folder containing the images using a file dialog
+        dlg = QFileDialog()
+        dlg.setFileMode(QFileDialog.Directory)
+        folderLocs = QStringList() #create a QstringList to hold the location data
+        if dlg.exec_():
+            folderLocs = dlg.selectedFiles()
+            for folderLoc in folderLocs:
+                #Export the recorder images as video using ffmpeg
+                print "Grabbing images from: ", str(folderLoc)
+                clip = ImageSequenceClip(str(folderLoc), fps = int(self.writeFPS))
+                print "Writing file..."
+                if self.writeMethod == 0:
+                    clip.write_videofile(self.localDir + "/exported/" + str(self.writeName) + ".avi",codec = str(self.writeCodec))
+                elif self.writeMethod == 1:            
+                    clip.write_gif(self.localDir + "/exported/" + str(self.writeName) + ".gif", program = str(self.writeProgram))
         
     def prepare_action(self):
         if self.receiving == True:
@@ -375,6 +395,10 @@ class mainWindow(QMainWindow):
         #if we are using RTL-SDR use gnu classes
         elif (self.transMeth == 2):
             self.video = windowCapture()
+            self.video.cropX1 = self.cropX1
+            self.video.cropY1 = self.cropY1
+            self.video.cropX2 = self.cropX2
+            self.video.cropY2 = self.cropY2
             self.video.capWindowName = str(self.windowTitle)
             self.video.capWindowResize = float(self.windowResize)
             self.video.moveToThread(self.thread)

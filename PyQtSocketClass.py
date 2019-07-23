@@ -17,6 +17,7 @@ class ShowReceivedVideo(QtCore.QObject):
         self.face_recker = None
         #image recording variables
         self.record = False
+        self.recordingFolder = self.localDir + "/recording/"
         self.skip_value = 1
         self.skip_count = 0
         self.record_count = 0
@@ -26,7 +27,8 @@ class ShowReceivedVideo(QtCore.QObject):
         self.buf = 1024
         self.fName = self.localDir + '/frames/frame.jpg'
         #set the pause screen image
-        self.pause_image = QtGui.QImage(self.localDir + '\images\FaceRecRFWait.png')
+        self.pauseImageDir = self.localDir + '\images\FaceRecRFWait.png'
+        self.pause_image = QtGui.QImage(self.pauseImageDir)
     
     video_signal = QtCore.pyqtSignal(QtGui.QImage, name = 'vidSig')
     label_signal = QtCore.pyqtSignal(int)
@@ -62,7 +64,7 @@ class ShowReceivedVideo(QtCore.QObject):
             if self.face_recker is not None:
                 predicted_image, image_label = self.faceRec.predict(self.face_recker,color_swapped_image)
             else:
-                predicted_image = color_swapped_image
+                predicted_image = self.faceRec.justDetect(color_swapped_image)
             height, width, _ = predicted_image.shape
             
             self.qt_image = QtGui.QImage(predicted_image.data,
@@ -70,7 +72,9 @@ class ShowReceivedVideo(QtCore.QObject):
                                     height,
                                     predicted_image.strides[0],
                                     QtGui.QImage.Format_RGB888)
-                                        
+            #resize pause image
+            self.pause_image = self.pause_image.scaled(width,height)
+            #emit the detection QImage
             self.emitted_signal = self.video_signal.emit(self.qt_image)
             self.another_signal = self.label_signal.emit(image_label[0])
             #Recording all predicted frames in recording folder after reconverting the color
@@ -78,7 +82,7 @@ class ShowReceivedVideo(QtCore.QObject):
                 self.skip_count += 1
                 if self.skip_count > self.skip_value:                        
                     image2save = cv2.cvtColor(predicted_image, cv2.COLOR_RGB2BGR) 
-                    cv2.imwrite(self.localDir + "/recording/img%d.jpg" % self.record_count,image2save)
+                    cv2.imwrite(self.recordingFolder + "img%d.jpg" % self.record_count,image2save)
                     self.record_count += 1
                     self.skip_count = 0
             
