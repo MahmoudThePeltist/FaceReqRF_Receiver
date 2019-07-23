@@ -24,7 +24,7 @@ class ShowIPVideo(QtCore.QObject):
         self.skip_count = 0
         self.record_count = 0  
         #IP Camera variables
-        self.httpAdress = 'http://192.168.23.2:4747/mjpegfeed'
+        self.httpAddress = 'http://192.168.23.2:4747/mjpegfeed'
         self.stream = 0
         self.bytes = ''
         #set the pause screen image
@@ -37,8 +37,8 @@ class ShowIPVideo(QtCore.QObject):
     @QtCore.pyqtSlot()
     def startVideo(self):
         if self.stream == 0:
-            print "Connecting to: ",self.httpAdress
-            urllib.urlopen(self.httpAdress)
+            print "Connecting to: ",self.httpAddress
+            self.stream = urllib.urlopen(str(self.httpAddress))
         #set the flag used to run the camera
         self.run_video = True
         while self.run_video:
