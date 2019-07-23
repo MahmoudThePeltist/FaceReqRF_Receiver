@@ -1,5 +1,6 @@
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
 import sqlite3
 import os
 import sys
@@ -36,7 +37,7 @@ class DisplayClass(QDialog):
             self.conn = sqlite3.connect(self.sqlite_file)
             self.c = self.conn.cursor()
         except Exception as e:
-            print "Database connect error.\nException:" + str(e)
+            print("Database connect error.\nException:" + str(e))
             errorBox("Database connect error.\nException:" + str(e))
         self.c.execute('SELECT * FROM {tn}'.\
             format(tn=self.tbl_name))
@@ -100,7 +101,7 @@ class DisplayClass(QDialog):
         if True:
             self.c.execute('DELETE FROM {tn} WHERE ID={pk}'.\
                 format(tn=self.tbl_name,pk=int(self.delTxt.text())))
-            print "Row with ID:",self.delTxt.text(), " Deleted."
+            print("Row with ID:",self.delTxt.text(), " Deleted.")
             #find the directories to the j folder and s folder for the deleted ID
             jPath = str(self.localDir + "/training-data/" + "j" + self.delTxt.text())
             sPath = str(self.localDir + "/training-data/" + "s" + self.delTxt.text())
@@ -109,19 +110,19 @@ class DisplayClass(QDialog):
                 try:
                     shutil.rmtree(jPath)
                 except Exception as e:
-                    print "J-del delete Error.\nException:" + str(e)
+                    print("J-del delete Error.\nException:" + str(e))
                     errorBox("J-del delete Error.\nException:" + str(e))
             else:
-                print jPath + " does not exist."
+                print(jPath + " does not exist.")
             #if s directory exists, delete it
             if os.path.exists(sPath):
                 try:
                     shutil.rmtree(sPath)
                 except Exception as e:
-                    print "S-dir delete Error.\nException:" + str(e)
+                    print("S-dir delete Error.\nException:" + str(e))
                     errorBox("S-dir delete Error.\nException:" + str(e))
             else:
-                print sPath + " does not exist."
+                print(sPath + " does not exist.")
         self.conn.commit()
         self.conn.close()
         self.delTxt.setText("")
@@ -133,7 +134,7 @@ class DisplayClass(QDialog):
             self.conn = sqlite3.connect(self.sqlite_file)
             self.c = self.conn.cursor()
         except Exception as e:
-            print "Database connect error.\nException:" + str(e)
+            print("Database connect error.\nException:" + str(e))
             errorBox("Database connect error.\nException:" + str(e))
         self.c.execute('SELECT * FROM {tn}'.\
             format(tn=self.tbl_name))

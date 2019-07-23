@@ -4,8 +4,9 @@ import os
 import sys
 from ctypes import windll
 from PIL import Image
-from PyQt4 import QtCore
-from PyQt4 import QtGui
+from PyQt5 import QtCore
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 import numpy 
 import cv2
 
@@ -31,7 +32,7 @@ class windowCapture(QtCore.QObject):
         self.face_recker = None
         #set the pause screen image
         self.pauseImageDir = self.localDir + '\images\FaceRecRFWait.png'
-        self.pause_image = QtGui.QImage(self.pauseImageDir)
+        self.pause_image = QImage(self.pauseImageDir)
         #image recording variables
         self.record = False
         self.recordingFolder = self.localDir + "/recording/"
@@ -50,22 +51,22 @@ class windowCapture(QtCore.QObject):
         self.windowHeight = 700
         self.useXML = 0
         
-    video_signal = QtCore.pyqtSignal(QtGui.QImage, name = 'vidSig')
+    video_signal = QtCore.pyqtSignal(QImage, name = 'vidSig')
     label_signal = QtCore.pyqtSignal(tuple)
     
     @QtCore.pyqtSlot()
     def startVideo(self):
         self.faceRec.faceDetector = self.detMethod
         self.faceRec.faceRecognizer = self.recMethod
-        print "\nWe are using face detector: " + str(self.faceRec.faceDetector)
-        print "We are using face recognizer: " + str(self.faceRec.faceRecognizer)
+        print("\nWe are using face detector: " + str(self.faceRec.faceDetector))
+        print("We are using face recognizer: " + str(self.faceRec.faceRecognizer))
         #set the flag used to run the camera
         self.run_video = True
         while self.run_video:
             try:
                 ret, frame = self.getImage()
             except Exception as e:
-                print "Image get exception check window name.\nException:" + str(e)
+                print("Image get exception check window name.\nException:" + str(e))
                 errorBox("Writing exception check window name.\nException:" + str(e))               
             if ret:            
                 self.newY2 = frame.shape[0] - self.cropY2 #image height - pixels to crop
@@ -82,7 +83,7 @@ class windowCapture(QtCore.QObject):
                 image_label = (0,0)
                 #load a pretrained recognizer XML file
                 if self.face_recker is None and self.useXML is 1:
-                    print "No recognizer found, attepting to load one."
+                    print("No recognizer found, attepting to load one.")
                     self.face_recker = self.faceRec.load_recognizer(self.recMethod)
                 #perform recognition if recognizer exists
                 if self.face_recker is not None:
@@ -92,11 +93,11 @@ class windowCapture(QtCore.QObject):
                 #get the dimensions of the image
                 height, width, _ = predicted_image.shape
                 #convert the detection cv2 image into a QImage
-                self.qt_image = QtGui.QImage(predicted_image.data,
+                self.qt_image = QImage(predicted_image.data,
                                         width,
                                         height,
                                         predicted_image.strides[0],
-                                        QtGui.QImage.Format_RGB888)
+                                        QImage.Format_RGB888)
                 #resize pause image
                 self.pause_image = self.pause_image.scaled(width,height)
                 #emit the detection QImage
@@ -119,7 +120,7 @@ class windowCapture(QtCore.QObject):
             self.faceRec.faceDetector = detMethod #Set the detector
             self.faceRec.prepare_training_images(self.training_data_folder)#create all training images
         except Exception as e:
-            print "Training exception check settings.\nException:" + str(e)
+            print("Training exception check settings.\nException:" + str(e))
             errorBox("Writing exception check settings.\nException:" + str(e))
         
     def train_algorithm(self, recMethod):
@@ -127,7 +128,7 @@ class windowCapture(QtCore.QObject):
             self.faceRec.faceRecognizer = recMethod #Set the recogizer
             self.face_recker = self.faceRec.train(self.training_data_folder)#train and return recognizer
         except Exception as e:
-            print "Training exception check settings.\nException:" + str(e)
+            print("Training exception check settings.\nException:" + str(e))
             errorBox("Writing exception check settings.\nException:" + str(e))
         
     def unpause_video(self):
@@ -168,7 +169,7 @@ class windowCapture(QtCore.QObject):
                 (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
                 bmpstr, 'raw', 'BGRX', 0, 1)
         except:
-            print "Image get exeption handled"
+            print("Image get exeption handled")
             return 0, 0
         win32gui.DeleteObject(saveBitMap.GetHandle())
         saveDC.DeleteDC()

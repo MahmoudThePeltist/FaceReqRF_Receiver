@@ -1,4 +1,5 @@
-from PyQt4.QtGui import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 import os
 import sys
 
@@ -95,7 +96,7 @@ class RecordingSettings(QDialog):
     
     #function to set the textbox default values
     def setValues(self, exportMethod, gottenSkip, gottenName, gottenFPS):
-        print "Current Values are: ", exportMethod, gottenSkip, gottenName, gottenFPS
+        print("Current Values are: ", exportMethod, gottenSkip, gottenName, gottenFPS)
         if exportMethod == 0:
             self.radio_button_0.setChecked(True)
         elif exportMethod == 1:
@@ -106,5 +107,5 @@ class RecordingSettings(QDialog):
         
     #function to return the new entered values
     def getValues(self):
-        print "New values are: ", self.radio_button_group.checkedId() , int(self.textBox1.text()), self.textBox2.text(), int (self.textBox3.text()), self.useCodec,self.useProgram
+        print("New values are: ", self.radio_button_group.checkedId() , int(self.textBox1.text()), self.textBox2.text(), int (self.textBox3.text()), self.useCodec,self.useProgram)
         return self.radio_button_group.checkedId() , int(self.textBox1.text()), self.textBox2.text(), int (self.textBox3.text()), self.useCodec, self.useProgram

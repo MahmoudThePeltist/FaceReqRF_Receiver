@@ -1,4 +1,5 @@
-from PyQt4.QtGui import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 import os
 import sys
 
@@ -82,7 +83,7 @@ class DetRecSettings(QDialog):
     
     #function to set the textbox default values
     def setValues(self, detMethod, recMethod, useXML):
-        print "Current Values are: ", detMethod, recMethod
+        print("Current Values are: ", detMethod, recMethod)
         if detMethod == 0:
             self.radio_button_0.setChecked(True)
         elif detMethod == 1:
@@ -102,5 +103,5 @@ class DetRecSettings(QDialog):
 
     #function to return the new entered values
     def getValues(self):
-        print "Detector: ", self.radio_button_group_1.checkedId(),"\nRecognizor: ",  self.radio_button_group_2.checkedId(),"\nUse pretrained recognizer XML: ", int(self.checkBox.isChecked())
+        print("Detector: ", self.radio_button_group_1.checkedId(),"\nRecognizor: ",  self.radio_button_group_2.checkedId(),"\nUse pretrained recognizer XML: ", int(self.checkBox.isChecked()))
         return self.radio_button_group_1.checkedId(),  self.radio_button_group_2.checkedId(), int(self.checkBox.isChecked())

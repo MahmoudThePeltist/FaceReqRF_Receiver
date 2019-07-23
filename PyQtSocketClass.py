@@ -1,5 +1,6 @@
-from PyQt4 import QtCore
-from PyQt4 import QtGui
+from PyQt5 import QtCore
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 import os
 import sys
 from socket import *
@@ -37,37 +38,37 @@ class ShowReceivedVideo(QtCore.QObject):
         self.fName = self.localDir + '/frames/frame.jpg'
         #set the pause screen image
         self.pauseImageDir = self.localDir + '\images\FaceRecRFWait.png'
-        self.pause_image = QtGui.QImage(self.pauseImageDir)
+        self.pause_image = QImage(self.pauseImageDir)
         self.useXML = 0
     
-    video_signal = QtCore.pyqtSignal(QtGui.QImage, name = 'vidSig')
+    video_signal = QtCore.pyqtSignal(QImage, name = 'vidSig')
     label_signal = QtCore.pyqtSignal(tuple)
     
     @QtCore.pyqtSlot()
     def startVideo(self):
         self.faceRec.faceDetector = self.detMethod
         self.faceRec.faceRecognizer = self.recMethod
-        print "\nWe are using face detector: " + str(self.faceRec.faceDetector)
-        print "We are using face recognizer: " + str(self.faceRec.faceRecognizer)
+        print("\nWe are using face detector: " + str(self.faceRec.faceDetector))
+        print("We are using face recognizer: " + str(self.faceRec.faceRecognizer))
         #set the flag used to run the camera
         self.run_video = True
         #open a socket that communicates with Internet Protocol v4 addresses (AF_INET) using UDP (SOCK_DGRAM)
         s = socket()
         self.addr = (self.host, self.port)
-        print "Reciving from: ", self.addr
+        print("Reciving from: ", self.addr)
         s.bind(self.addr)
         while self.run_video:
             f = open(self.localDir + '/frames/frame.jpg', 'wb')
             s.listen(5)                    
             c, addr = s.accept()     # Establish connection with client.
-            print 'Got connection from', addr
-            print "Receiving..."
+            print('Got connection from', addr)
+            print("Receiving...")
             l = c.recv(self.buf)
             while (l):
                 f.write(l)
                 l = c.recv(self.buf)
             f.close()   # Close the recived file
-            print "Done Receiving"
+            print("Done Receiving")
             c.send('Thank you for connecting')
             c.close()    # Close the connection            
             frame = cv2.imread(self.localDir + '/frames/frame.jpg')
@@ -77,7 +78,7 @@ class ShowReceivedVideo(QtCore.QObject):
             image_label = (0,0)
             #load a pretrained recognizer XML file
             if self.face_recker is None and self.useXML is 1:
-                print "No recognizer found, attepting to load one."
+                print("No recognizer found, attepting to load one.")
                 self.face_recker = self.faceRec.load_recognizer(self.recMethod)
             #perform recognition if recognizer exists
             if self.face_recker is not None:
@@ -86,11 +87,11 @@ class ShowReceivedVideo(QtCore.QObject):
                 predicted_image = self.faceRec.justDetect(color_swapped_image)
             height, width, _ = predicted_image.shape
             
-            self.qt_image = QtGui.QImage(predicted_image.data,
+            self.qt_image = QImage(predicted_image.data,
                                     width,
                                     height,
                                     predicted_image.strides[0],
-                                    QtGui.QImage.Format_RGB888)
+                                    QImage.Format_RGB888)
             #resize pause image
             self.pause_image = self.pause_image.scaled(width,height)
             #emit the detection QImage
@@ -113,7 +114,7 @@ class ShowReceivedVideo(QtCore.QObject):
             self.faceRec.faceDetector = detMethod #Set the detector
             self.faceRec.prepare_training_images(self.training_data_folder)#create all training images
         except Exception as e:
-            print "Training exception check settings.\nException:" + str(e)
+            print("Training exception check settings.\nException:" + str(e))
             errorBox("Writing exception check settings.\nException:" + str(e))
         
     def train_algorithm(self, recMethod):
@@ -121,7 +122,7 @@ class ShowReceivedVideo(QtCore.QObject):
             self.faceRec.faceRecognizer = recMethod #Set the recogizer
             self.face_recker = self.faceRec.train(self.training_data_folder)#train and return recognizer
         except Exception as e:
-            print "Training exception check settings.\nException:" + str(e)
+            print("Training exception check settings.\nException:" + str(e))
             errorBox("Writing exception check settings.\nException:" + str(e))
         
     def unpause_video(self):

@@ -1,9 +1,11 @@
-from PyQt4 import QtCore
-from PyQt4 import QtGui
+from PyQt5 import QtCore
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+
 import os
 import sys
 
-class ImageViewer(QtGui.QWidget):
+class ImageViewer(QWidget):
     """Play the image stream inside the image viewer"""
     
     def __init__(self, parent = None):
@@ -17,15 +19,15 @@ class ImageViewer(QtGui.QWidget):
             self.localDir = os.path.dirname(os.path.realpath(__file__)) 
         #set the default screen image 
         self.default_image = self.localDir + '/images/FaceRecRFRecognize.png'
-        self.image = QtGui.QImage(self.default_image,"PNG")
+        self.image = QImage(self.default_image,"PNG")
         self.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
  
     def paintEvent(self, event):
-        painter = QtGui.QPainter(self)
+        painter = QPainter(self)
         painter.drawImage(0,0, self.image)
-        self.image = QtGui.QImage()
+        self.image = QImage()
  
-    @QtCore.pyqtSlot(QtGui.QImage)
+    @QtCore.pyqtSlot(QImage)
     def setImage(self, image):
         if image.isNull():
             print("Viewer Dropped frame!")

@@ -1,87 +1,88 @@
-print "---- ### Welcome to FaceReqRF ### ----\n"
-print "Importing Sys, OS and datetime libraries... "
+print("---- ### Welcome to FaceReqRF ### ----\n")
+print("Importing Sys, OS and datetime libraries... ")
 import sys
 import os
 import datetime
-#these imports are for cx_freeze
-print "Importing numpy... "
+# these imports are for cx_freeze
+print("Importing numpy... ")
 import numpy.core._methods
 import numpy.lib.format
-#pyqt import
-print "Importing PyQt4, sqlite3, Socket... "
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+# pyqt import
+print("Importing PyQt5, sqlite3, Socket... ")
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
 from sqlite3 import *
 from socket import gethostbyname, gethostname
-#try to import moviepy
-print "Trying to import MoviePy..."
+#  Try to import moviepy
+print("Trying to import MoviePy...")
 try:
     from moviepy.editor import ImageSequenceClip
 except Exception as e:
-   print "MoviePy import error.\nException:" + str(e)
-#reception and display classes
-print "Importing local modules... "
+   print("MoviePy import error.\nException:" + str(e))
+# reception and display classes
+print("Importing local modules... ")
 from PyQtCamClass import *
 from PyQtSocketClass import *
 from PyQtHTTPClass import *
 from PyQtWindowClass import *
 from PyQtImageViewer import *
-#settings widgets
+# settings widgets
 from SettingsClientWidget import *
 from SettingsFaceWidget import *
 from SettingsExportWidget import *
-#sql classes
+# sql classes
 from SQLiteDisplayTableClass import *
 from SQLiteDBClass import *
 from ManuallyAddFace import *
-#facial recognition class
+# facial recognition class
 from CV2FacRecClass import *
-#help and error dialogs
+# help and error dialogs
 from DialogHelp import *
 from DialogError import *
 
 class mainWindow(QMainWindow):
     def __init__(self):
-        #call super user constructor
+        # call super user constructor
         super(mainWindow,self).__init__()  
-        #set window title and icon
+        # set window title and icon
         if getattr(sys, 'frozen', False):
-            # The application is frozen
+            #  The application is frozen
             self.localDir = os.path.dirname(sys.executable)
         else:
             # The application is not frozen
             self.localDir = os.path.dirname(os.path.realpath(__file__))    
-        #set window title and icon                       
+        # set window title and icon
         self.setWindowTitle("FaceReqRF - Main Menu")
         self.setWindowIcon(QIcon(self.localDir + "/images/FaceReqRFIcon.png"))
-        #call the function to create the window
+        # call the function to create the window
         self.create_main_menu_layout()
-        #stylesheet
+        # stylesheet
         self.setStyleSheet("QPushButton {background-color: #7a92ba; height:30%; border: none; color:white; font-size:16px;} QPushButton:hover{background-color: #5370a0}")
-        #create stacked layout
+        # create stacked layout
         self.stacked_layout = QStackedLayout()
         self.stacked_layout.addWidget(self.select_main_menu_widget)
-        #select the central widget to display the layout
+        # select the central widget to display the layout
         self.central_widget = QWidget()
         self.central_widget.setLayout(self.stacked_layout)
         self.setCentralWidget(self.central_widget)
-        #Make sure recording directory exists
+        # Make sure recording directory exists
         if not os.path.exists(self.localDir + "/recording"):
-            print "Directory: ", (self.localDir + "/recording"), " does not exist, creating..."
+            print("Directory: ", (self.localDir + "/recording"), " does not exist, creating...")
             os.makedirs(self.localDir + "/recording")
-        #Make sure database directory exists
+        # Make sure database directory exists
         if not os.path.exists(self.localDir + "/database"):
-            print "Directory: ", (self.localDir + "/database"), " does not exist, creating..."
+            print("Directory: ", (self.localDir + "/database"), " does not exist, creating...")
             os.makedirs(self.localDir + "/database")
-        #Make sure exported directory exists
+        # Make sure exported directory exists
         if not os.path.exists(self.localDir + "/exported"):
-            print "Directory: ", (self.localDir + "/exported"), " does not exist, creating..."
+            print("Directory: ", (self.localDir + "/exported"), " does not exist, creating...")
             os.makedirs(self.localDir + "/exported")
-        #Make sure frames directory exists
+        # Make sure frames directory exists
         if not os.path.exists(self.localDir + "/frames"):
-            print "Directory: ", (self.localDir + "/frames"), " does not exist, creating..."
+            print("Directory: ", (self.localDir + "/frames"), " does not exist, creating...")
             os.makedirs(self.localDir + "/frames")
-        #reception variables
+        # reception variables
         self.transMeth = 1
         self.host = gethostbyname(gethostname())
         self.port = 4096
@@ -92,30 +93,30 @@ class mainWindow(QMainWindow):
         self.cropY1 = 120
         self.cropX2 = 350
         self.cropY2 = 0
-        #button flags
+        # button flags
         self.recording = False
         self.receiving = False
         self.firstRun = True
-        #Detection and Recognition flags
+        # Detection and Recognition flags
         self.detMethod = 2
         self.recMethod = 2
         self.useXML = 1
-        #recording variables
+        # recording variables
         self.recordSkip = 0
         self.writeFPS = 10
         self.writeMethod = 0
         self.writeName = 'recording'
-        self.writeCodec = "libx264" #libx264 or mpeg4 or rawvideo or png or libvorbis or libvpx
-        self.writeProgram = "imageio" #imageio or ImageMagick or ffmpeg
-        self.httpAddress = 'http://192.168.23.2:4747/mjpegfeed'#IP Cam variable
-        self.camPort = 0 #local webcam port
+        self.writeCodec = "libx264" # libx264 or mpeg4 or rawvideo or png or libvorbis or libvpx
+        self.writeProgram = "imageio" # imageio or ImageMagick or ffmpeg
+        self.httpAddress = 'http://192.168.23.2:4747/mjpegfeed'# IP Cam variable
+        self.camPort = 0 # local webcam port
         
     def create_main_menu_layout(self):
-        #image in main window:
+        # image in main window:
         self.back_image = QLabel()
         self.back_image.setPixmap(QPixmap(self.localDir + '\images\FaceRecRFBackground.png'))
         self.back_image.setScaledContents(1)
-        #several buttons:
+        # several buttons:
         self.b1 = QPushButton("Start Receiving")
         self.b2 = QPushButton("Add New Face")
         self.b3 = QPushButton("Reception Settings")
@@ -123,7 +124,7 @@ class mainWindow(QMainWindow):
         self.b5 = QPushButton("Recording Settings")
         self.b6 = QPushButton("Help")
         self.b7 = QPushButton("Quit")
-        #Connections:
+        # Connections:
         self.b1.clicked.connect(self.recognize_window)
         self.b2.clicked.connect(self.face_window)
         self.b3.clicked.connect(self.modifyReceptionSettings)
@@ -131,13 +132,13 @@ class mainWindow(QMainWindow):
         self.b5.clicked.connect(self.modifyRecordingSettings)
         self.b6.clicked.connect(self.help_window)
         self.b7.clicked.connect(self.quit_window)
-        #Create the main layout
+        # Create the main layout
         self.vBox = QVBoxLayout()
-        #add widgets to layput
+        # add widgets to layput
         self.vBox.addWidget(self.back_image)
         self.vBox.addWidget(self.b1)
         self.vBox.addWidget(self.b2)
-        #create layout for horizontal buttons and add them to it        
+        # create layout for horizontal buttons and add them to it
         self.hBox1 = QHBoxLayout()     
         self.hBox2 = QHBoxLayout()
         self.hBox1.addWidget(self.b3)
@@ -145,105 +146,105 @@ class mainWindow(QMainWindow):
         self.hBox1.addWidget(self.b5)  
         self.hBox2.addWidget(self.b6)
         self.hBox2.addWidget(self.b7)
-        #add horizontal layout to vertical layout
+        # add horizontal layout to vertical layout
         self.vBox.addLayout(self.hBox1)
         self.vBox.addLayout(self.hBox2)
-        #create main widget and set it's layout
+        # create main widget and set it's layout
         self.select_main_menu_widget = QWidget()
         self.select_main_menu_widget.setLayout(self.vBox)
     
     def recognize_window(self):
-        print "Showing reciving window..."
-        #Create the recognize window
+        print("Showing reciving window...")
+        # Create the recognize window
         self.create_recognize_window() 
-        #add this to the stack
+        # add this to the stack
         self.stacked_layout.addWidget(self.view_recognize_menu_widget) 
-        #change the visible layout in the stack
+        # change the visible layout in the stack
         self.stacked_layout.setCurrentWidget(self.view_recognize_menu_widget)
         
     def face_window(self):
-        print "Showing face window..."
-        self.create_face_window() #Create the add face layout
-        self.stacked_layout.addWidget(self.view_face_menu_widget)#add this to the stack
-        #change the visible layout in the stack
+        print("Showing face window...")
+        self.create_face_window() # Create the add face layout
+        self.stacked_layout.addWidget(self.view_face_menu_widget)# add this to the stack
+        # change the visible layout in the stack
         self.stacked_layout.setCurrentWidget(self.view_face_menu_widget)
         
     def help_window(self):
-        print "showing help window..."
+        print("showing help window...")
         self.msg = helpMenu()
         self.msg.exec_()
         
     def modifyReceptionSettings(self):
-        self.reception_dialog = ReceptionSettings()#instantiate the dialog box
-        #set values
+        self.reception_dialog = ReceptionSettings()# instantiate the dialog box
+        # set values
         self.reception_dialog.setValues(self.transMeth,self.host,self.port,self.buf,self.windowTitle, self.windowResize,self.cropX1,self.cropY1,self.cropX2,self.cropY2, self.httpAddress, self.camPort)
-        print "Running dialog box."
+        print("Running dialog box.")
         self.reception_dialog.exec_()
-        print "Getting setting values."
+        print("Getting setting values.")
         self.transMeth,self.host,self.port,self.buf,self.windowTitle, self.windowResize,self.cropX1,self.cropY1,self.cropX2,self.cropY2, self.httpAddress, self.camPort  = self.reception_dialog.getValues()
         
     def modifyDetRecSettings(self):
-        self.reception_dialog = DetRecSettings()#instantiate the dialog box
-        #set values
+        self.reception_dialog = DetRecSettings()# instantiate the dialog box
+        # set values
         self.reception_dialog.setValues(self.detMethod,self.recMethod, self.useXML)
-        print "Running dialog box."
+        print("Running dialog box.")
         self.reception_dialog.exec_()
-        print "Getting setting values."
+        print("Getting setting values.")
         self.detMethod, self.recMethod, self.useXML = self.reception_dialog.getValues()
         
     def modifyRecordingSettings(self):
-        self.recording_dialog = RecordingSettings()#instantiate the dialog box
-        #set values
+        self.recording_dialog = RecordingSettings()# instantiate the dialog box
+        # set values
         self.recording_dialog.setValues(self.writeMethod,self.recordSkip,self.writeName,self.writeFPS)
-        print "Running dialog box."
+        print("Running dialog box.")
         self.recording_dialog.exec_()
-        print "Getting setting values."
+        print("Getting setting values.")
         self.writeMethod,self.recordSkip,self.writeName,self.writeFPS,self.writeCodec,self.writeProgram = self.recording_dialog.getValues()
         
     def main_window(self):
-        print "showing main window..."
-        self.stacked_layout.setCurrentIndex(0) #change the visible layout in the stack
+        print("showing main window...")
+        self.stacked_layout.setCurrentIndex(0) # change the visible layout in the stack
         
     def quit_window(self):
-        print "Quiting..."
+        print("Quiting...")
         self.close()
         
     def receive_action(self):
-        #if we are receiving pause and if we are paused start receiving
+        # if we are receiving pause and if we are paused start receiving
         if self.receiving == False:
-            #set the recognizer variables
+            # set the recognizer variables
             self.video.recMethod = self.recMethod 
             self.video.detMethod = self.detMethod 
             self.video.useXML = self.useXML
-            #call self.video.startVideo() func with this click() see func where btn is defined for more info
+            # call self.video.startVideo() func with this click() see func where btn is defined for more info
             self.invisible_start_btn.click()
-            self.receiving = True #set local flag            
-            print "Starting reception..."
-            self.receive_btn.setText(">> Pause Reception <<") #change the text written on the btn
+            self.receiving = True # set local flag
+            print("Starting reception...")
+            self.receive_btn.setText(">> Pause Reception <<") # change the text written on the btn
         elif self.receiving == True:
-            print "Pausing reception..."
-            self.video.run_video = False #set the startVideo function flag off, so we pause rec
-            self.receiving = False #set local flag
-            self.receive_btn.setText("<< Start Reception >>")  #change the text written on the btn
+            print("Pausing reception...")
+            self.video.run_video = False # set the startVideo function flag off, so we pause rec
+            self.receiving = False # set local flag
+            self.receive_btn.setText("<< Start Reception >>")  # change the text written on the btn
             
     def record_action(self):       
-        #we need to setup a folder to hold the recorded frames
-        now = datetime.datetime.now()#get current date info
-        folder_name = now.strftime("%Y%m%d") + "_" + str(self.transMeth)#folder name 'year+month+day_transmissionMethod'
+        # we need to setup a folder to hold the recorded frames
+        now = datetime.datetime.now()# get current date info
+        folder_name = now.strftime("%Y%m%d") + "_" + str(self.transMeth)# folder name 'year+month+day_transmissionMethod'
         #if folder does not exist create it
         if not os.path.exists(self.localDir + "/recording/" + folder_name):
-            print "Directory: ", (self.localDir + "/recording/" + folder_name), " does not exist, creating..."
+            print("Directory: ", (self.localDir + "/recording/" + folder_name), " does not exist, creating...")
             os.makedirs(self.localDir + "/recording/" + folder_name)
         #Start or stop recording the frames being displayed
         if self.recording == False:
-            print "Recording all images!"
+            print("Recording all images!")
             self.video.recordingFolder = self.localDir + "/recording/" + folder_name + "/"
             self.video.skip_value = self.recordSkip
             self.video.record = True #Start recording all images by setting the record flag = true
             self.record_btn.setText(">> Stop Recording <<")
             self.recording = True #set local flag
         elif self.recording == True:
-            print "Stopping recording of images!"
+            print("Stopping recording of images!")
             self.video.record = False #Stop recording images by setting the record flag = false
             self.record_btn.setText("<< Start Recording >>")
             self.recording = False
@@ -257,62 +258,62 @@ class mainWindow(QMainWindow):
             folderLocs = dlg.selectedFiles()
             for folderLoc in folderLocs:
                 #Export the recorder images as video using ffmpeg
-                print "Grabbing images from: ", str(folderLoc)
+                print("Grabbing images from: ", str(folderLoc))
                 folderName = str(folderLoc)[-8:]#get the folder name (the last 8 characters) from the directory name
                 try:
                     clip = ImageSequenceClip(str(folderLoc), fps = int(self.writeFPS))
-                    print "Writing file..."
+                    print("Writing file...")
                     if self.writeMethod == 0:
                         clip.write_videofile(self.localDir + "/exported/" + folderName + "_" + str(self.writeName) + ".avi",codec = str(self.writeCodec))
                     elif self.writeMethod == 1:            
                         clip.write_gif(self.localDir + "/exported/" + folderName + "_" + str(self.writeName) + ".gif", program = str(self.writeProgram))
                 except Exception as e:
-                    print "Writing exception check settings.\nException:" + str(e)
+                    print("Writing exception check settings.\nException:" + str(e))
                     errorBox("Writing exception check settings.\nException:" + str(e))
         
     def prepare_action(self):
         if self.receiving == True:
-            print "Pausing reception..."
+            print("Pausing reception...")
             self.video.run_video = False #set the startVideo function flag off, so we pause rec
             self.receiving = False #set local flag
             self.receive_btn.setText("<< Start Reception >>")  #change the text written on the btn
         try:
-            print "Preparing images for training..."
+            print("Preparing images for training...")
             self.video.prepare_pics(self.detMethod)
         except Exception as e:
-            print "Preperation error.\nException:" + str(e)
+            print("Preperation error.\nException:" + str(e))
             errorBox("Preperation error.\nException:" + str(e))
             
     def train_action(self):
         if self.receiving == True:
-            print "Pausing reception..."
+            print("Pausing reception...")
             self.video.run_video = False #set the startVideo function flag off, so we pause rec
             self.receiving = False #set local flag
             self.receive_btn.setText("<< Start Reception >>")  #change the text written on the btn
         try:
-            print "Training using prepared images..."
+            print("Training using prepared images...")
             self.video.train_algorithm(self.recMethod)
         except Exception as e:
-            print "Training error.\nException:" + str(e)
+            print("Training error.\nException:" + str(e))
             errorBox("Training error.\nException:" + str(e))
             
     def add_action(self):
-        print "Adding: "
+        print("Adding: ")
         dbms = database_manager()
-        print "DBMS ready..."
+        print("DBMS ready...")
         dbms.create_employee_table()
-        print "Table ready..."
+        print("Table ready...")
         #get values from the interface
         first_name = self.lef1.text()
         last_name = self.lef2.text()
         position = self.lef3.text()
         id_number = self.lef4.text()
         #add all the values to the database
-        print "trying to add: " + first_name + " " + last_name + " " + position + " " + id_number
+        print("trying to add: " + first_name + " " + last_name + " " + position + " " + id_number)
         #check if the image folder exists, if it does not create dialog box
         folderName = "j" + str(id_number)
         if os.path.exists(self.localDir + "/training-data/" + folderName):  
-            print "folder " + folderName + " found!"
+            print("folder " + folderName + " found!")
         else:
             faceFolderAdd = faceChoice()
             faceFolderAdd.camPort = self.camPort
@@ -324,7 +325,7 @@ class mainWindow(QMainWindow):
         dbms.add_value('Employees','ID','Position',id_number,position)     
         dbms.add_value('Employees','ID','File Name',id_number,folderName) 
         dbms.commit_close()#commit and close the database   
-        print 'Data added'    
+        print('Data added')    
         self.lef1.setText("")
         self.lef2.setText("")
         self.lef3.setText("")
@@ -332,7 +333,7 @@ class mainWindow(QMainWindow):
     
     def display_table(self):
         self.database_dialog = DisplayClass()#instantiate the dialog box
-        print "Running dialog box."
+        print("Running dialog box.")
         self.database_dialog.exec_()                
         
     def rec_form_set(self, my_label):
@@ -453,7 +454,7 @@ class mainWindow(QMainWindow):
                 self.video.moveToThread(self.thread)
                 self.image_viewer = ImageViewer()
             except Exception as e:
-                print "Reception initialization error, check settings.\nException:" + str(e)
+                print("Reception initialization error, check settings.\nException:" + str(e))
                 errorBox("Writing exception check settings.\nException:" + str(e))
         #if we are using local webcam use webcam classes
         elif (self.transMeth == 1):
@@ -477,7 +478,7 @@ class mainWindow(QMainWindow):
                 self.video.moveToThread(self.thread)
                 self.image_viewer = ImageViewer()
             except Exception as e:
-                print "Reception initialization error, check settings.\nException:" + str(e)
+                print("Reception initialization error, check settings.\nException:" + str(e))
                 errorBox("Writing exception check settings.\nException:" + str(e))
         #if we are using an IP camera
         elif (self.transMeth == 3):
@@ -487,7 +488,7 @@ class mainWindow(QMainWindow):
                 self.video.moveToThread(self.thread)
                 self.image_viewer = ImageViewer()                
             except Exception as e:
-                print "Reception initialization error, check settings.\nException:" + str(e)
+                print("Reception initialization error, check settings.\nException:" + str(e))
                 errorBox("Writing exception check settings.\nException:" + str(e))
         #connect to the streams
         self.video.video_signal.connect(self.image_viewer.setImage)

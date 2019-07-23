@@ -42,14 +42,14 @@ class database_manager():
             self.add_column(self.tbl_name,'File Name','TEXT')
         #exception handling in case table exists
         except sqlite3.OperationalError:
-            print 'Table ' + self.tbl_name + ' already exists!'
+            print('Table ' + self.tbl_name + ' already exists!')
 
     #function to insert a specific value into a specific column of a row with a specific index and update
     def add_value(self, table_name, id_column, column_name, id_num, value):
         self.c.execute("INSERT OR IGNORE INTO {tn} ({idf}, '{cn}') VALUES ({im}, '{va}')".\
             format(tn=table_name, idf=id_column, cn=column_name, im=id_num, va=value))   
-        print('Added {va} value to {cn} column in {idf} number {im}'.\
-            format(va=value, cn=column_name, idf=id_column, im=id_num))    
+        print(('Added {va} value to {cn} column in {idf} number {im}'.\
+            format(va=value, cn=column_name, idf=id_column, im=id_num)))    
         self.c.execute("UPDATE {tn} SET '{cn}'=('{va}') WHERE {idf}=({im})".\
             format(tn=table_name, cn=column_name, va=value, idf=id_column, im=id_num))
         self.get_value('*',table_name,'ID','3')

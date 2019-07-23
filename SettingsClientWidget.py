@@ -1,4 +1,5 @@
-from PyQt4.QtGui import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 import os
 import sys
 
@@ -122,10 +123,10 @@ class ReceptionSettings(QDialog):
         
     #function to set the textbox default values
     def setValues(self, transMethod, gottenAddress, gottenPort, gottenBuffer, gottenFrequency, gottenSampRate, gottenX1, gottenY1, gottenX2, gottenY2, gottenHTTPAdress, gottenCamPort):
-        print "Current reception method: ", transMethod
-        print "Current LAN settings: ", gottenAddress, gottenPort, gottenBuffer
-        print "Current RTL settings: ", gottenFrequency, gottenSampRate
-        print "HTTP address: ",gottenHTTPAdress, " __ Webcam port: ", gottenCamPort
+        print("Current reception method: ", transMethod)
+        print("Current LAN settings: ", gottenAddress, gottenPort, gottenBuffer)
+        print("Current RTL settings: ", gottenFrequency, gottenSampRate)
+        print("HTTP address: ",gottenHTTPAdress, " __ Webcam port: ", gottenCamPort)
         if transMethod == 0:
             self.radio_button_0.setChecked(True)
             self.RTL_group_box.setEnabled(False)    
@@ -164,10 +165,10 @@ class ReceptionSettings(QDialog):
         
     #function to return the new entered values
     def getValues(self):
-        print "New reception method: ", self.radio_button_group.checkedId()
-        print "New LAN settings: ", self.textBox1.text(), int(self.textBox2.text()), int (self.textBox3.text())
-        print "New RTL settings: ", self.textBox4.text(), self.textBox5.text()
-        print "New HTTP address: ", self.textBox7.text(), " __ New webcam port: ", self.textBox8.text()
+        print("New reception method: ", self.radio_button_group.checkedId())
+        print("New LAN settings: ", self.textBox1.text(), int(self.textBox2.text()), int (self.textBox3.text()))
+        print("New RTL settings: ", self.textBox4.text(), self.textBox5.text())
+        print("New HTTP address: ", self.textBox7.text(), " __ New webcam port: ", self.textBox8.text())
         return self.radio_button_group.checkedId() , self.textBox1.text(), int(self.textBox2.text()), int (self.textBox3.text()), self.textBox4.text(), self.textBox5.text(), int(self.textBox6a.text()), int(self.textBox6b.text()), int(self.textBox6c.text()), int(self.textBox6d.text()), self.textBox7.text(), int(self.textBox8.text())
         
     #functions to control which settings are enabled or disabled

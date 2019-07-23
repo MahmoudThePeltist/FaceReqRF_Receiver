@@ -57,10 +57,10 @@ class facial_recognition():
             face_folder_name = dir_name.replace("j", "s")
             #if it exists skip, if it doesn't create it
             if os.path.exists(data_folder_path + "/" + face_folder_name):  
-                print "folder: ", (data_folder_path + "/" + face_folder_name), " exists, skipping..."
+                print("folder: ", (data_folder_path + "/" + face_folder_name), " exists, skipping...")
                 continue;
             if not os.path.exists(data_folder_path + "/" + face_folder_name):
-                print "Directory: ", (data_folder_path + "/" + face_folder_name), " does not exist, creating..."
+                print("Directory: ", (data_folder_path + "/" + face_folder_name), " does not exist, creating...")
                 os.makedirs(data_folder_path + "/" + face_folder_name)
             #get the path to the images
             subject_dir_path = data_folder_path + "/" + dir_name
@@ -74,20 +74,20 @@ class facial_recognition():
                 try:
                     cv2.imshow("Editing image...", image)
                 except:
-                    print "Could not show image: ", image_name
+                    print("Could not show image: ", image_name)
                 #cv2.waitKey(10)
                 #detect face
                 face, rect = self.detect_face(image)
                 #if face is real edit and add to face folder           
                 if face is not None:
                     resized_face = cv2.resize(face,(350,350))
-                    print "Face from image: ", image_name, " being added to ", (data_folder_path + "/" + face_folder_name)
+                    print("Face from image: ", image_name, " being added to ", (data_folder_path + "/" + face_folder_name))
                     cv2.imwrite(os.path.join((data_folder_path + "/" + face_folder_name),image_name),resized_face)
                     cv2.destroyAllWindows()
                 cv2.waitKey(1)
             cv2.destroyAllWindows()            
         endTimeA = time.time()
-        print "Preperation time: " + str(endTimeA - startTimeA)        
+        print("Preperation time: " + str(endTimeA - startTimeA))        
         return 0
    
     
@@ -118,7 +118,7 @@ class facial_recognition():
                     grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                 except:
                     grayscale_image = image
-                print "Adding: " + image_path + " @ " + str(label)
+                print("Adding: " + image_path + " @ " + str(label))
                 faces_list.append(grayscale_image)
                 labels_list.append(label)
                 cv2.destroyAllWindows()
@@ -130,11 +130,11 @@ class facial_recognition():
     
     def train(self, data_folder_path):
         #calls the prepare function and trains, self explanitory
-        print "Preparing data..."
+        print("Preparing data...")
         faces, labels = self.prepare_training_data(data_folder_path)
-        print "Data prepared"
-        print "Number of faces: ", len(faces), "\nNumber of labels: ", len(labels)
-        print "Creating recognizer..."
+        print("Data prepared")
+        print("Number of faces: ", len(faces), "\nNumber of labels: ", len(labels))
+        print("Creating recognizer...")
         if self.faceRecognizer == 0:
             face_recognizer = cv2.face.EigenFaceRecognizer_create()
             self.takeValue = 25000
@@ -144,17 +144,17 @@ class facial_recognition():
         elif self.faceRecognizer == 2:
             face_recognizer = cv2.face.LBPHFaceRecognizer_create()
             self.takeValue = 250
-        print "Training..."
+        print("Training...")
         startTimeB = time.time()
         face_recognizer.train(faces, np.array(labels))
         #find location to save appropriate XML recognizer file
         save_location = self.localDir + "/training-data/trained_" + str(self.faceRecognizer) + "_recognizer.xml"        
-        print "Saving file at: " + save_location        
+        print("Saving file at: " + save_location)        
         face_recognizer.save(save_location)
         endTimeB = time.time()
-        print "Fininished training!"
+        print("Fininished training!")
         #return the trained recognizer
-        print "Training time: " + str(endTimeB - startTimeB)  
+        print("Training time: " + str(endTimeB - startTimeB))  
         return face_recognizer
     
     def draw_rectangle(self, image, rect):
@@ -175,13 +175,13 @@ class facial_recognition():
             self.takeValue = 150
         #find the location of the saved file and return it if it exists
         save_location = self.localDir + "/training-data/trained_" + str(faceRecognizer) + "_recognizer.xml"                
-        print "Searching for saved XML training file at " + save_location
+        print("Searching for saved XML training file at " + save_location)
         if os.path.exists(save_location):
-            print "..file found: " + save_location
+            print("..file found: " + save_location)
             face_recognizer.read(save_location)
             return face_recognizer
         else:
-            print "..file not found"
+            print("..file not found")
             return None 
  
     def draw_text(self, image, text, x, y):
