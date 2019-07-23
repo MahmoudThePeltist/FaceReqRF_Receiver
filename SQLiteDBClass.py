@@ -1,9 +1,14 @@
 import sqlite3
+import os
 
 class database_manager():
-    def __init__(self,parent = None):        
+    """This class is to access and modify the database"""
+    
+    def __init__(self,parent = None):    
+        #get the local directory
+        self.localDir = os.path.dirname(os.path.realpath(__file__))    
         # Connecting to the database file
-        sqlite_file = 'database/my_db.sqlite'
+        sqlite_file = self.localDir + '/database/my_db.sqlite'
         self.tbl_name = 'Employees';
         self.conn = sqlite3.connect(sqlite_file)
         self.c = self.conn.cursor()

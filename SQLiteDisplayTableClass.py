@@ -1,22 +1,25 @@
 from PyQt4.QtGui import *
+from PyQt4.QtCore import *
 import sqlite3
+import os
 
 class DisplayClass(QDialog):
     """This class displays a table of entered people"""
     
     def __init__(self):
         super(DisplayClass, self).__init__()
-                
+        #get local directory
+        self.localDir = os.path.dirname(os.path.realpath(__file__))
+        #set the window title, icon and geometry  
         self.setWindowTitle("Table Display")
-        self.setWindowIcon(QIcon("images/FaceReqRFIcon.png"))
+        self.setWindowIcon(QIcon(self.localDir + "/images/FaceReqRFIcon.png"))
         self.setGeometry(25,50,535,400)
         #adding table and buttons
         self.displayTable = QTableWidget()
         self.refreshButton = QPushButton("Refresh")
         self.quitButton = QPushButton("Quit")
-                
         #get the values from the database
-        self.sqlite_file = 'database/my_db.sqlite'
+        self.sqlite_file = self.localDir + '/database/my_db.sqlite'
         self.tbl_name = 'Employees';
         self.conn = sqlite3.connect(self.sqlite_file)
         self.c = self.conn.cursor()
@@ -32,7 +35,10 @@ class DisplayClass(QDialog):
         #populate the table with values from the database
         for rowValues in self.tableValues:
             for self.col in range(0, len(self.tableValues[0])):
-                self.displayTable.setItem(self.row, self.col, QTableWidgetItem(rowValues[self.col]))
+                #get a value, turn it into a string, then into a table item
+                item = QTableWidgetItem(str(rowValues[self.col]))
+                item.setFlags(Qt.ItemIsEnabled)#make the item non editable
+                self.displayTable.setItem(self.row, self.col, item) #display item in table           
             self.row += 1        
         
         #button layout setup
@@ -60,5 +66,8 @@ class DisplayClass(QDialog):
         #populate the table with values from the database
         for rowValues in self.tableValues:
             for self.col in range(0, len(self.tableValues[0])):
-                self.displayTable.setItem(self.row, self.col, QTableWidgetItem(rowValues[self.col]))
+                #get a value, turn it into a string, then into a table item
+                item = QTableWidgetItem(str(rowValues[self.col]))
+                item.setFlags(Qt.ItemIsEnabled)#make the item non editable
+                self.displayTable.setItem(self.row, self.col, item) #display item in table
             self.row += 1

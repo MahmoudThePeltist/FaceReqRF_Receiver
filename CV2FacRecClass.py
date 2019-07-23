@@ -1,4 +1,5 @@
 import cv2
+import time
 import os
 import numpy as np
 from SQLiteDBClass import *
@@ -6,6 +7,7 @@ from SQLiteDBClass import *
 class facial_recognition():
 
     def __init__(self, parent = None):
+        #set window title and icon
         self.localDir = os.path.dirname(os.path.realpath(__file__))
         self.faceDetector = 1
         self.faceRecognizer = 2        
@@ -32,6 +34,7 @@ class facial_recognition():
         #go through the directory and find folders
         dirs = os.listdir(data_folder_path)
         #go through the folders
+        startTimeA = time.time()
         for dir_name in dirs:
             #if folder does not have j prefix, skip
             if not dir_name.startswith("j"):
@@ -55,7 +58,7 @@ class facial_recognition():
                 image_path = subject_dir_path + "/" + image_name
                 image = cv2.imread(image_path)
                 cv2.imshow("Editing image...", image)
-                cv2.waitKey(100)
+                #cv2.waitKey(10)
                 #detect face
                 face, rect = self.detect_face(image)
                 #if face is real edit and add to face folder           
@@ -65,7 +68,9 @@ class facial_recognition():
                     cv2.imwrite(os.path.join((data_folder_path + "/" + face_folder_name),image_name),resized_face)
                     cv2.destroyAllWindows()
                 cv2.waitKey(1)
-            cv2.destroyAllWindows()
+            cv2.destroyAllWindows()            
+        endTimeA = time.time()
+        print "Preperation time: " + str(endTimeA - startTimeA)        
         return 0
    
     
@@ -93,7 +98,7 @@ class facial_recognition():
                 print 'looking for:', (subject_dir_path + "/" + image_name)
                 image = cv2.imread(image_path)
                 cv2.imshow("Training on image...", image)
-                cv2.waitKey(100)
+                #cv2.waitKey(10)
                 grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                 faces_list.append(grayscale_image)
                 labels_list.append(label)
@@ -118,9 +123,12 @@ class facial_recognition():
         elif self.faceRecognizer == 2:
             face_recognizer = cv2.createLBPHFaceRecognizer()
         print "Training..."
+        startTimeB = time.time()
         face_recognizer.train(faces, np.array(labels))
+        endTimeB = time.time()
         print "Fininished training!"
         #return the trained recognizer
+        print "Training time: " + str(endTimeB - startTimeB)  
         return face_recognizer
     
     def draw_rectangle(self, image, rect):

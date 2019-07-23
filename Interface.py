@@ -5,26 +5,30 @@ from PyQt4.QtCore import *
 from sqlite3 import *
 from moviepy.editor import ImageSequenceClip
 from socket import gethostbyname, gethostname
-
-from Cam2PyQtClass import *
-from Socket2PyQtClass import *
-from HTTP2PyQtClass import *
-
-from ClientSettingsWidget import *
-from FaceSettingsWidget import *
-from ExportSettingsWidget import *
+#reception and display classes
+from PyQtCamClass import *
+from PyQtSocketClass import *
+from PyQtHTTPClass import *
+from PyQtWindowClass import *
+#settings widgets
+from SettingsClientWidget import *
+from SettingsFaceWidget import *
+from SettingsExportWidget import *
+#sql classes
 from SQLiteDisplayTableClass import *
-from GNURadioIQReciver import *
-from CV2FacRecClass import *
 from SQLiteDBClass import *
-
+from ManuallyAddFace import *
+#facial recognition class
+from CV2FacRecClass import *
+from DialogHelp import *
 
 class mainWindow(QMainWindow):
     def __init__(self):
         #call super user constructor
         super(mainWindow,self).__init__()  
         #set window title and icon
-        self.localDir = os.path.dirname(os.path.realpath(__file__))                        
+        self.localDir = os.path.dirname(os.path.realpath(__file__)) 
+        #set window title and icon                       
         self.setWindowTitle("FaceReqRF - Main Menu")
         self.setWindowIcon(QIcon(self.localDir + "/images/FaceReqRFIcon.png"))
         #call the function to create the window
@@ -43,8 +47,8 @@ class mainWindow(QMainWindow):
         self.host = gethostbyname(gethostname())
         self.port = 4096
         self.buf = 1024
-        self.frequency = 440e6
-        self.sampRate = 500e3
+        self.windowTitle = 'firefox'
+        self.windowResize = 1
         #button flags
         self.recording = False
         self.receiving = False
@@ -59,7 +63,6 @@ class mainWindow(QMainWindow):
         self.writeName = 'recording'
         self.writeCodec = "libx264" #libx264 or mpeg4 or rawvideo or png or libvorbis or libvpx
         self.writeProgram = "imageio" #imageio or ImageMagick or ffmpeg
-        
         self.httpAddress = 'http://192.168.23.2:4747/mjpegfeed'#IP Cam variable
         self.camPort = 1 #local webcam port
         
@@ -122,25 +125,18 @@ class mainWindow(QMainWindow):
         self.stacked_layout.setCurrentWidget(self.view_face_menu_widget)
         
     def help_window(self):
-        #create a small window that contains basic information about the app using QMessageBox
         print "showing help window..."
-        self.msg = QMessageBox()
-        self.msg.setIcon(QMessageBox.Information)
-        self.msg.setText("FaceReqRF is a facial Recognition project by:")
-        self.msg.setInformativeText("Mahmoud Aburas and Soliman Shalloof")
-        self.msg.setWindowTitle("Help")
-        self.msg.setDetailedText("Details: This is a facial recognition program, start reciving data being transmitted by the HackRF or add a new face to the database. remember to click 'prepare' after adding images and train the algorithm with the images.")
-        self.msg.setStandardButtons(QMessageBox.Ok)
+        self.msg = helpMenu()
         self.msg.exec_()
         
     def modifyReceptionSettings(self):
         self.reception_dialog = ReceptionSettings()#instantiate the dialog box
         #set values
-        self.reception_dialog.setValues(self.transMeth,self.host,self.port,self.buf,self.frequency, self.sampRate, self.httpAddress, self.camPort)
+        self.reception_dialog.setValues(self.transMeth,self.host,self.port,self.buf,self.windowTitle, self.windowResize, self.httpAddress, self.camPort)
         print "Running dialog box."
         self.reception_dialog.exec_()
         print "Getting setting values."
-        self.transMeth,self.host,self.port,self.buf,self.frequency, self.sampRate, self.httpAddress, self.camPort  = self.reception_dialog.getValues()
+        self.transMeth,self.host,self.port,self.buf,self.windowTitle, self.windowResize, self.httpAddress, self.camPort  = self.reception_dialog.getValues()
         
     def modifyDetRecSettings(self):
         self.reception_dialog = DetRecSettings()#instantiate the dialog box
@@ -202,9 +198,9 @@ class mainWindow(QMainWindow):
         clip = ImageSequenceClip("recording", fps = int(self.writeFPS))
         print "Writing file..."
         if self.writeMethod == 0:
-            clip.write_videofile(str(self.writeName) + ".avi",codec = str(self.writeCodec))
+            clip.write_videofile("exported/" + str(self.writeName) + ".avi",codec = str(self.writeCodec))
         elif self.writeMethod == 1:            
-            clip.write_gif(str(self.writeName) + ".gif", program = str(self.writeProgram))
+            clip.write_gif("exported/" + str(self.writeName) + ".gif", program = str(self.writeProgram))
         
     def prepare_action(self):
         if self.receiving == True:
@@ -235,20 +231,28 @@ class mainWindow(QMainWindow):
         last_name = self.lef2.text()
         position = self.lef3.text()
         id_number = self.lef4.text()
-        img_folder = self.lef5.text()
         #add all the values to the database
-        print first_name + " " + last_name + " " + position + " " + id_number + " " + img_folder
+        print "trying to add: " + first_name + " " + last_name + " " + position + " " + id_number
+        #check if the image folder exists, if it does not create dialog box
+        folderName = "j" + str(id_number)
+        if os.path.exists(self.localDir + "/training-data/" + folderName):  
+            print "folder " + folderName + " found!"
+        else:
+            faceFolderAdd = faceChoice()
+            faceFolderAdd.camPort = self.camPort
+            faceFolderAdd.setFolderName(folderName)
+            faceFolderAdd.exec_()
+        #add the gotten values
         dbms.add_value('Employees','ID','First Name',id_number,first_name)
         dbms.add_value('Employees','ID','Last Name',id_number,last_name) 
-        dbms.add_value('Employees','ID','Position',id_number,position) 
-        dbms.add_value('Employees','ID','File Name',id_number,img_folder) 
+        dbms.add_value('Employees','ID','Position',id_number,position)     
+        dbms.add_value('Employees','ID','File Name',id_number,folderName) 
         dbms.commit_close()#commit and close the database   
         print 'Data added'    
         self.lef1.setText("")
         self.lef2.setText("")
         self.lef3.setText("")
         self.lef4.setText("")
-        self.lef5.setText("")
     
     def display_table(self):
         self.database_dialog = DisplayClass()#instantiate the dialog box
@@ -280,25 +284,21 @@ class mainWindow(QMainWindow):
         self.lf2 = QLabel("Last Name: ")
         self.lf3 = QLabel("Position: ")
         self.lf4 = QLabel("ID Number: ")
-        self.lf5 = QLabel("Images Folder: ")
         #add textboxes
         self.lef1 = QLineEdit()
         self.lef2 = QLineEdit()
         self.lef3 = QLineEdit()
         self.lef4 = QLineEdit()
-        self.lef5 = QLineEdit()
         #font settings
         font_A = QFont('Helvetica',15)
         self.lf1.setFont(font_A)
         self.lf2.setFont(font_A)
         self.lf3.setFont(font_A)
         self.lf4.setFont(font_A)
-        self.lf5.setFont(font_A)
         self.lef1.setFont(font_A)
         self.lef2.setFont(font_A)
         self.lef3.setFont(font_A)
         self.lef4.setFont(font_A)
-        self.lef5.setFont(font_A)
         #add buttons
         self.add_btn = QPushButton("Add")
         self.table_btn = QPushButton("Display Table")
@@ -316,13 +316,11 @@ class mainWindow(QMainWindow):
         self.form_grid.addWidget(self.lf2,1,0)
         self.form_grid.addWidget(self.lf3,2,0)
         self.form_grid.addWidget(self.lf4,3,0)
-        self.form_grid.addWidget(self.lf5,4,0)
         #add line edit widgets to the grid layout
         self.form_grid.addWidget(self.lef1,0,1)
         self.form_grid.addWidget(self.lef2,1,1)
         self.form_grid.addWidget(self.lef3,2,1)
         self.form_grid.addWidget(self.lef4,3,1)
-        self.form_grid.addWidget(self.lef5,4,1)
         #add buttons to layout
         self.button_grid.addWidget(self.add_btn,0,0)
         self.button_grid.addWidget(self.table_btn,0,1)
@@ -377,8 +375,11 @@ class mainWindow(QMainWindow):
         #if we are using RTL-SDR use gnu classes
         elif (self.transMeth == 2):
             self.video = windowCapture()
+            self.video.capWindowName = str(self.windowTitle)
+            self.video.capWindowResize = float(self.windowResize)
             self.video.moveToThread(self.thread)
             self.image_viewer = ImageViewer()
+        #if we are using an IP camera
         elif (self.transMeth == 3):
             self.video = ShowIPVideo()
             self.video.httpAddress = self.httpAddress
